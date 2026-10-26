@@ -1,0 +1,19 @@
+# Dataset structures: the SHACL shapes behind dct:conformsTo/dct:hasPart.
+# datasets.sparql copies only one hop from a dataset, which reaches the
+# structure node (untyped, nothing but dct:hasPart) and stops short of the
+# shapes. From each shape this walks property shapes, nested shapes (sh:node)
+# and sh:in lists (skolem list nodes), copying every node it reaches. The list
+# members themselves are values, so rdf:first is not followed.
+# fetch.sh replaces #VALUES# with a batch of dataset IRIs.
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX sh: <http://www.w3.org/ns/shacl#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+CONSTRUCT { ?s ?p ?o }
+WHERE {
+  GRAPH <https://lindas.admin.ch/fso/i14y> {
+    VALUES ?d { #VALUES# }
+    ?d dct:conformsTo/dct:hasPart ?shape .
+    ?shape (sh:property|sh:node|sh:in|rdf:rest)* ?s .
+    ?s ?p ?o .
+  }
+}

@@ -53,8 +53,10 @@ log "  datasets: $(wc -l < "$RAW/tmp/datasets.txt")"
 split -l "$LINDAS_BATCH" -d -a 3 "$RAW/tmp/datasets.txt" "$RAW/tmp/batch-"
 for b in "$RAW"/tmp/batch-*; do
   values=$(sed 's/.*/<&>/' "$b" | tr '\n' ' ')
-  sed "s|#VALUES#|$values|" lindas/datasets.sparql > "$b.sparql"
-  "$ROOT/scripts/lindas-construct.sh" "$LINDAS_ENDPOINT" "$b.sparql" "$RAW/lindas/datasets-${b##*-}.nt"
+  for q in datasets structures; do
+    sed "s|#VALUES#|$values|" "lindas/$q.sparql" > "$b.$q.sparql"
+    "$ROOT/scripts/lindas-construct.sh" "$LINDAS_ENDPOINT" "$b.$q.sparql" "$RAW/lindas/$q-${b##*-}.nt"
+  done
 done
 "$ROOT/scripts/lindas-construct.sh" "$LINDAS_ENDPOINT" lindas/concept-schemes.sparql "$RAW/lindas/concept-schemes.nt"
 log "  triples: $(cat "$RAW"/lindas/*.nt | wc -l)"

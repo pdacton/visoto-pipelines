@@ -1,13 +1,15 @@
 # Guards against a partial upstream response publishing a near-empty graph.
 # Minimums sit well below the counts seen on 2026-10-26
-# (datasets 2512, concept schemes 725, data services 80, public services 139, catalogs 243).
+# (datasets 2512, concept schemes 725, data services 80, public services 139, catalogs 243,
+# node shapes 1394).
 PREFIX dcat: <http://www.w3.org/ns/dcat#>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
+PREFIX sh: <http://www.w3.org/ns/shacl#>
 SELECT ?problem WHERE {
   VALUES (?class ?min) {
     (dcat:Dataset 2000) (skos:ConceptScheme 600) (dcat:DataService 60)
-    (cpsv:PublicService 100) (dcat:Catalog 200)
+    (cpsv:PublicService 100) (dcat:Catalog 200) (sh:NodeShape 1100)
   }
   OPTIONAL { SELECT ?class (COUNT(DISTINCT ?s) AS ?count) WHERE { ?s a ?class } GROUP BY ?class }
   BIND(COALESCE(?count, 0) AS ?n)
