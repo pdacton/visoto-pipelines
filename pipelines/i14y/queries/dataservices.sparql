@@ -1,0 +1,114 @@
+# I14Y data services (API JSON) → DCAT-AP CH, shaped like I14Y's own catalog
+# export. IRIs: dataservice/{id}, as in that export.
+PREFIX fx:     <http://sparql.xyz/facade-x/ns/>
+PREFIX xyz:    <http://sparql.xyz/facade-x/data/>
+PREFIX dcat:   <http://www.w3.org/ns/dcat#>
+PREFIX dct:    <http://purl.org/dc/terms/>
+PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
+PREFIX vcard:  <http://www.w3.org/2006/vcard/ns#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+
+CONSTRUCT {
+  ?ds a dcat:DataService ;
+    dct:identifier ?ident ;
+    dct:title ?title ;
+    dct:description ?description ;
+    dcat:keyword ?keyword ;
+    dct:publisher ?publisher ;
+    dcat:accessRights ?accessRights ;
+    dct:license ?license ;
+    dcat:endpointURL ?endpointURL ;
+    dcat:endpointDescription ?endpointDescription ;
+    dcat:landingPage ?landingPage ;
+    foaf:page ?page ;
+    dct:conformsTo ?standard ;
+    dcat:theme ?theme ;
+    dcat:servesDataset ?dataset ;
+    dcat:version ?version ;
+    dct:issued ?issued ;
+    dct:modified ?modified ;
+    dcat:contactPoint ?cp .
+  ?publisher a foaf:Agent, foaf:Organization ; foaf:name ?publisherName .
+  ?link rdfs:label ?linkLabel .
+  ?cp a vcard:Organization ;
+    vcard:fn ?cpName ;
+    vcard:adrWork ?cpAddress ;
+    vcard:hasEmail ?cpEmail ;
+    vcard:hasTelephone ?cpPhone .
+}
+WHERE {
+  {
+    SERVICE <x-sparql-anything:location=raw/api/dataservices.json> {
+      ?root a fx:root ; fx:anySlot ?r .
+      ?r xyz:id ?id .
+      {
+        ?r xyz:identifiers/fx:anySlot ?ident .
+      } UNION {
+        ?r xyz:title ?m . ?m ?lk ?lv . FILTER(?lv != "")
+        BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?title)
+      } UNION {
+        ?r xyz:description ?m . ?m ?lk ?lv . FILTER(?lv != "")
+        BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?description)
+      } UNION {
+        ?r xyz:keywords/fx:anySlot/xyz:label ?m . ?m ?lk ?lv . FILTER(?lv != "")
+        BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?keyword)
+      } UNION {
+        ?r xyz:publisher ?p . ?p xyz:identifier ?pid .
+        BIND(IRI(CONCAT("https://register.ld.admin.ch/i14y/agent/", ?pid)) AS ?publisher)
+        OPTIONAL {
+          ?p xyz:name ?m . ?m ?lk ?lv . FILTER(?lv != "")
+          BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?publisherName)
+        }
+      } UNION {
+        ?r xyz:accessRights/xyz:uri ?u . BIND(IRI(?u) AS ?accessRights)
+      } UNION {
+        ?r xyz:license/xyz:uri ?u . BIND(IRI(?u) AS ?license)
+      } UNION {
+        # Links with an optional multilingual label
+        VALUES (?key ?kind) {
+          (xyz:endpointUrls "endpointURL") (xyz:endpointDescriptions "endpointDescription")
+          (xyz:landingPages "landingPage") (xyz:documentation "page") (xyz:conformsTo "standard")
+        }
+        ?r ?key ?list . ?list fx:anySlot ?l . ?l xyz:uri ?u .
+        FILTER(REGEX(?u, "^https?://[^\\s<>\"{}|\\\\^`]+$"))
+        BIND(IRI(?u) AS ?link)
+        BIND(IF(?kind = "endpointURL", ?link, ?undef) AS ?endpointURL)
+        BIND(IF(?kind = "endpointDescription", ?link, ?undef) AS ?endpointDescription)
+        BIND(IF(?kind = "landingPage", ?link, ?undef) AS ?landingPage)
+        BIND(IF(?kind = "page", ?link, ?undef) AS ?page)
+        BIND(IF(?kind = "standard", ?link, ?undef) AS ?standard)
+        OPTIONAL {
+          ?l xyz:label ?m . ?m ?lk ?lv . FILTER(?lv != "")
+          BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?linkLabel)
+        }
+      } UNION {
+        ?r xyz:themes/fx:anySlot/xyz:code ?code .
+        BIND(IRI(CONCAT("https://register.ld.admin.ch/i14y/concept/DV_DCAT_DATASET_THEME/", ?code, "/version/1.1.0")) AS ?theme)
+      } UNION {
+        ?r xyz:version ?version .
+      } UNION {
+        ?r xyz:issued ?v . BIND(STRDT(?v, xsd:dateTime) AS ?issued)
+      } UNION {
+        ?r xyz:system/xyz:modifiedAt ?v . BIND(STRDT(?v, xsd:dateTime) AS ?modified)
+      } UNION {
+        ?r xyz:contactPoints/fx:anySlot ?cp .
+        OPTIONAL { ?cp xyz:fn ?m . ?m ?lk ?lv . FILTER(?lv != "") BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?cpName) }
+        OPTIONAL { ?cp xyz:hasAddress ?m2 . ?m2 ?lk2 ?lv2 . FILTER(?lv2 != "") BIND(STRLANG(?lv2, STRAFTER(STR(?lk2), STR(xyz:))) AS ?cpAddress) }
+        OPTIONAL { ?cp xyz:hasEmail ?cpEmail }
+        OPTIONAL { ?cp xyz:hasTelephone ?cpPhone }
+      }
+    }
+  } UNION {
+    # Served datasets: API gives the dataset's id, the IRI needs its identifier.
+    SERVICE <x-sparql-anything:location=raw/api/dataservices.json> {
+      ?root a fx:root ; fx:anySlot ?r .
+      ?r xyz:id ?id ; xyz:servesDatasets/fx:anySlot/xyz:id ?sid .
+    }
+    SERVICE <x-sparql-anything:location=raw/api/dataset-ids.json> {
+      ?x xyz:id ?sid ; xyz:identifier ?sident .
+    }
+    BIND(IRI(CONCAT("https://register.ld.admin.ch/i14y/dataset/", ?sident)) AS ?dataset)
+  }
+  BIND(IRI(CONCAT("https://register.ld.admin.ch/i14y/dataservice/", ?id)) AS ?ds)
+}

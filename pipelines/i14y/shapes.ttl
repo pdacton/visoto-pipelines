@@ -1,0 +1,43 @@
+# SHACL shapes for the API-derived part of the I14Y graph. The parts copied
+# from LINDAS and I14Y's catalog export are covered by checks/ only.
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix foaf:   <http://xmlns.com/foaf/0.1/> .
+@prefix vcard:  <http://www.w3.org/2006/vcard/ns#> .
+@prefix cpsv:   <http://purl.org/vocab/cpsv#> .
+@prefix cv:     <http://data.europa.eu/m8g/> .
+@prefix shapes: <urn:data:i14y-githubpipeline:shapes#> .
+
+shapes:DataService a sh:NodeShape ;
+  sh:targetClass dcat:DataService ;
+  sh:property [ sh:path dct:title ; sh:minCount 1 ; sh:datatype rdf:langString ] ;
+  sh:property [ sh:path dct:description ; sh:datatype rdf:langString ] ;
+  sh:property [ sh:path dct:publisher ; sh:maxCount 1 ; sh:nodeKind sh:BlankNodeOrIRI ] ;
+  sh:property [ sh:path dcat:endpointURL ; sh:nodeKind sh:IRI ] ;
+  sh:property [ sh:path dcat:servesDataset ; sh:nodeKind sh:IRI ] ;
+  sh:property [ sh:path dcat:theme ; sh:nodeKind sh:IRI ] ;
+  sh:property [ sh:path dct:issued ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ;
+  sh:property [ sh:path dct:modified ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ;
+  sh:property [ sh:path dcat:contactPoint ; sh:class vcard:Organization ] .
+
+shapes:PublicService a sh:NodeShape ;
+  sh:targetClass cpsv:PublicService ;
+  sh:property [ sh:path dct:identifier ; sh:minCount 1 ; sh:maxCount 1 ] ;
+  sh:property [ sh:path dct:title ; sh:minCount 1 ; sh:datatype rdf:langString ] ;
+  sh:property [ sh:path dct:description ; sh:datatype rdf:langString ] ;
+  sh:property [ sh:path cv:hasCompetentAuthority ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+  sh:property [ sh:path cv:hasChannel ; sh:class cv:Channel ] ;
+  sh:property [ sh:path cv:isDescribedAt ; sh:nodeKind sh:IRI ] ;
+  sh:property [ sh:path dct:language ; sh:nodeKind sh:IRI ] ;
+  sh:property [ sh:path dct:modified ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] .
+
+shapes:Channel a sh:NodeShape ;
+  sh:targetClass cv:Channel ;
+  sh:property [ sh:path dct:type ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] .
+
+shapes:Catalog a sh:NodeShape ;
+  sh:targetClass dcat:Catalog ;
+  sh:property [ sh:path dct:title ; sh:minCount 1 ] .

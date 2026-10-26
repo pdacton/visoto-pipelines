@@ -1,0 +1,11 @@
+# Concept schemes without their concepts: schema:hasDefinedTerm (460k links
+# to code-list entries) is left out.
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX schema: <http://schema.org/>
+CONSTRUCT { ?s ?p ?o }
+WHERE {
+  GRAPH <https://lindas.admin.ch/fso/i14y> {
+    ?s a skos:ConceptScheme ; ?p ?o .
+    FILTER(?p != schema:hasDefinedTerm)
+  }
+}

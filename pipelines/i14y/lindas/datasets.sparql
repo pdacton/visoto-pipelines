@@ -1,0 +1,29 @@
+# Datasets with everything hanging off them: their own triples, their
+# skolemized nodes (distributions, contact points, periods, relationships,
+# attributions) and the documents, standards and agents they point to.
+# Concepts, concept schemes and other datasets are linked, not copied.
+# fetch.sh replaces #VALUES# with a batch of dataset IRIs.
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+CONSTRUCT { ?s ?p ?o }
+WHERE {
+  GRAPH <https://lindas.admin.ch/fso/i14y> {
+    VALUES ?d { #VALUES# }
+    {
+      ?d ?p ?o .
+      BIND(?d AS ?s)
+    } UNION {
+      ?d ?p1 ?s .
+      FILTER(!isLiteral(?s))
+      ?s ?p ?o .
+      FILTER NOT EXISTS { ?s a ?t . FILTER(?t IN (skos:Concept, skos:ConceptScheme, dcat:Dataset)) }
+    } UNION {
+      ?d ?p1 ?n .
+      FILTER(isBlank(?n) || STRSTARTS(STR(?n), CONCAT(STR(?d), "/.well-known/genid/")))
+      ?n ?p2 ?s .
+      FILTER(!isLiteral(?s))
+      ?s ?p ?o .
+      FILTER NOT EXISTS { ?s a ?t . FILTER(?t IN (skos:Concept, skos:ConceptScheme, dcat:Dataset)) }
+    }
+  }
+}

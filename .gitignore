@@ -1,0 +1,5 @@
+# Downloaded tools (JRE, SPARQL Anything, Jena, jq)
+.tools/
+# Pipeline working files
+pipelines/*/raw/
+pipelines/*/out/

@@ -1,0 +1,139 @@
+# I14Y public services (API JSON) → CPSV-AP.
+# IRIs: publicservice/{identifier}, as the I14Y register uses.
+PREFIX fx:     <http://sparql.xyz/facade-x/ns/>
+PREFIX xyz:    <http://sparql.xyz/facade-x/data/>
+PREFIX cpsv:   <http://purl.org/vocab/cpsv#>
+PREFIX cv:     <http://data.europa.eu/m8g/>
+PREFIX dcat:   <http://www.w3.org/ns/dcat#>
+PREFIX dct:    <http://purl.org/dc/terms/>
+PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
+PREFIX vcard:  <http://www.w3.org/2006/vcard/ns#>
+PREFIX schema: <http://schema.org/>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+
+CONSTRUCT {
+  ?ps a cpsv:PublicService ;
+    dct:identifier ?ident ;
+    dct:title ?title ;
+    dct:description ?description ;
+    dcat:keyword ?keyword ;
+    dct:language ?language ;
+    cv:hasCompetentAuthority ?authority ;
+    cv:thematicArea ?thematicArea ;
+    cv:sector ?sector ;
+    dct:spatial ?spatial ;
+    cv:isGroupedBy ?event ;
+    cv:hasChannel ?channel ;
+    cv:isDescribedAt ?dataset ;
+    cpsv:requires ?required ;
+    dct:relation ?related ;
+    dct:modified ?modified .
+  ?authority a foaf:Agent, foaf:Organization ; foaf:name ?authorityName .
+  ?event a ?eventType ; dct:identifier ?eventCode ; dct:title ?eventName .
+  ?channel a cv:Channel ;
+    dct:identifier ?channelIdent ;
+    dct:description ?channelDescription ;
+    dct:type ?channelType ;
+    cv:ownedBy ?owner ;
+    schema:url ?channelUrl ;
+    vcard:hasEmail ?channelEmail ;
+    vcard:hasTelephone ?channelPhone ;
+    cv:openingHours ?openingHours .
+}
+WHERE {
+  {
+    SERVICE <x-sparql-anything:location=raw/api/publicservices.json> {
+      ?root a fx:root ; fx:anySlot ?r .
+      ?r xyz:identifiers/fx:anySlot ?ident .
+      {
+        ?r xyz:name ?m . ?m ?lk ?lv . FILTER(?lv != "")
+        BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?title)
+      } UNION {
+        ?r xyz:description ?m . ?m ?lk ?lv . FILTER(?lv != "")
+        BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?description)
+      } UNION {
+        ?r xyz:keywords/fx:anySlot/xyz:label ?m . ?m ?lk ?lv . FILTER(?lv != "")
+        BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?keyword)
+      } UNION {
+        ?r xyz:languages/fx:anySlot/xyz:code ?lang .
+        VALUES (?lang ?langCode) { ("de" "DEU") ("fr" "FRA") ("it" "ITA") ("en" "ENG") ("rm" "ROH") }
+        BIND(IRI(CONCAT("http://publications.europa.eu/resource/authority/language/", ?langCode)) AS ?language)
+      } UNION {
+        ?r xyz:publisher ?p . ?p xyz:identifier ?pid .
+        BIND(IRI(CONCAT("https://register.ld.admin.ch/i14y/agent/", ?pid)) AS ?authority)
+        OPTIONAL {
+          ?p xyz:name ?m . ?m ?lk ?lv . FILTER(?lv != "")
+          BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?authorityName)
+        }
+      } UNION {
+        ?r xyz:thematicAreas/fx:anySlot/xyz:code ?code .
+        BIND(IRI(CONCAT("https://register.ld.admin.ch/i14y/concept/DV_DCAT_DATASET_THEME/", ?code, "/version/1.1.0")) AS ?thematicArea)
+      } UNION {
+        ?r xyz:sectors/fx:anySlot/xyz:code ?code .
+        BIND(IRI(CONCAT("https://register.ld.admin.ch/i14y/concept/DV_DCAT_DATASET_THEME/", ?code, "/version/1.1.0")) AS ?sector)
+      } UNION {
+        ?r xyz:spatial/fx:anySlot ?spatial .
+      } UNION {
+        ?r xyz:spatialCH/fx:anySlot/xyz:name ?m . ?m ?lk ?lv . FILTER(?lv != "")
+        BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?spatial)
+      } UNION {
+        VALUES (?key ?eventType) { (xyz:lifeEvents cv:LifeEvent) (xyz:businessEvents cv:BusinessEvent) }
+        ?r ?key ?list . ?list fx:anySlot ?event .
+        ?event xyz:code ?eventCode .
+        OPTIONAL {
+          ?event xyz:name ?m . ?m ?lk ?lv . FILTER(?lv != "")
+          BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?eventName)
+        }
+      } UNION {
+        ?r xyz:channels/fx:anySlot ?channel .
+        {
+          ?channel xyz:identifier ?channelIdent .
+        } UNION {
+          ?channel xyz:description ?m . ?m ?lk ?lv . FILTER(?lv != "")
+          BIND(STRLANG(?lv, STRAFTER(STR(?lk), STR(xyz:))) AS ?channelDescription)
+        } UNION {
+          ?channel xyz:type/xyz:uri ?u . BIND(IRI(?u) AS ?channelType)
+        } UNION {
+          ?channel xyz:ownedBy/fx:anySlot/xyz:identifier ?oid .
+          BIND(IRI(CONCAT("https://register.ld.admin.ch/i14y/agent/", ?oid)) AS ?owner)
+        } UNION {
+          ?channel xyz:url ?u .
+          FILTER(REGEX(?u, "^https?://[^\\s<>\"{}|\\\\^`]+$"))
+          BIND(IRI(?u) AS ?channelUrl)
+        } UNION {
+          ?channel xyz:email ?channelEmail .
+        } UNION {
+          ?channel xyz:phone ?channelPhone .
+        } UNION {
+          ?channel xyz:openingHours ?openingHours .
+        }
+      } UNION {
+        ?r xyz:system/xyz:modifiedAt ?v . BIND(STRDT(?v, xsd:dateTime) AS ?modified)
+      }
+    }
+  } UNION {
+    # Dataset links: API gives the dataset's id, the IRI needs its identifier.
+    SERVICE <x-sparql-anything:location=raw/api/publicservices.json> {
+      ?root a fx:root ; fx:anySlot ?r .
+      ?r xyz:identifiers/fx:anySlot ?ident ; xyz:isDescribedAt/fx:anySlot/xyz:id ?did .
+    }
+    SERVICE <x-sparql-anything:location=raw/api/dataset-ids.json> {
+      ?x xyz:id ?did ; xyz:identifier ?dident .
+    }
+    BIND(IRI(CONCAT("https://register.ld.admin.ch/i14y/dataset/", ?dident)) AS ?dataset)
+  } UNION {
+    # Links to other public services, by id.
+    SERVICE <x-sparql-anything:location=raw/api/publicservices.json> {
+      ?root a fx:root ; fx:anySlot ?r .
+      ?r xyz:identifiers/fx:anySlot ?ident .
+      VALUES (?key ?kind) { (xyz:requires "requires") (xyz:relations "relation") }
+      ?r ?key ?list . ?list fx:anySlot/xyz:id ?oid .
+      ?root fx:anySlot ?other .
+      ?other xyz:id ?oid ; xyz:identifiers/fx:anySlot ?oident .
+    }
+    BIND(IRI(CONCAT("https://register.ld.admin.ch/i14y/publicservice/", ?oident)) AS ?target)
+    BIND(IF(?kind = "requires", ?target, ?undef) AS ?required)
+    BIND(IF(?kind = "relation", ?target, ?undef) AS ?related)
+  }
+  BIND(IRI(CONCAT("https://register.ld.admin.ch/i14y/publicservice/", ?ident)) AS ?ps)
+}

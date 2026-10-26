@@ -1,0 +1,19 @@
+name: i14y
+
+on:
+  schedule:
+    - cron: '17 2 * * *'   # nightly
+  workflow_dispatch:
+
+concurrency:
+  group: i14y
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  i14y:
+    uses: ./.github/workflows/pipeline.yml
+    with:
+      name: i14y

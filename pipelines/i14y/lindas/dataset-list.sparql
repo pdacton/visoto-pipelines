@@ -1,0 +1,5 @@
+# All I14Y datasets on LINDAS
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
+SELECT DISTINCT ?d WHERE {
+  GRAPH <https://lindas.admin.ch/fso/i14y> { ?d a dcat:Dataset }
+}

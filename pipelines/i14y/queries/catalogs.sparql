@@ -1,0 +1,14 @@
+# I14Y catalogs, from I14Y's own DCAT export (raw/api/catalogs.nt).
+# Only the catalog records and their publishers: the datasets and data
+# services the exports also contain come from LINDAS and the API instead.
+PREFIX dcat:   <http://www.w3.org/ns/dcat#>
+PREFIX dct:    <http://purl.org/dc/terms/>
+
+CONSTRUCT { ?s ?p ?o }
+WHERE {
+  SERVICE <x-sparql-anything:location=raw/api/catalogs.nt> {
+    { ?s a dcat:Catalog ; ?p ?o }
+    UNION
+    { ?c a dcat:Catalog ; dct:publisher ?s . ?s ?p ?o . FILTER(isIRI(?s)) }
+  }
+}

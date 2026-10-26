@@ -18,17 +18,19 @@ on GitHub, from where visoto loads it into its private QLever triplestore.
 
 ```
 pipelines/<name>/
-  fetch.sh            # extract: API → raw/*.json, LINDAS → raw/*.ttl
+  fetch.sh            # extract: API → raw/api/, LINDAS → raw/lindas/*.nt
   lindas/*.sparql     # extract: CONSTRUCT queries run against LINDAS
   queries/*.sparql    # transform: SPARQL Anything mappings
   shapes.ttl          # validate: SHACL
-  pipeline.env        # name, graph IRI, release tag, endpoints
+  checks/*.rq         # validate: SELECTs that return a ?problem row on failure
+  pipeline.env        # name, graph IRI, label, endpoints, COPY (raw files merged as is)
   raw/  out/          # gitignored
 scripts/              # shared by all pipelines
   run.sh <name>       # fetch → transform → validate, locally and in CI
   sparql-anything.sh  # fetches the pinned jar, runs a query
   lindas-construct.sh # paged CONSTRUCT against a SPARQL endpoint
-  validate.sh         # SHACL + sanity checks
+  validate.sh         # SHACL + checks/
+  meta.sh             # out/<name>.meta.json
   publish.sh          # replaces the <name>-latest release assets
 .github/workflows/
   pipeline.yml        # reusable workflow (workflow_call, input: name)

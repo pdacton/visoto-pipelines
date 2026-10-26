@@ -12,21 +12,23 @@ Status: **decided**.
   mappings, SHACL validation.
 - Single jar (version pinned); runs on a stock Actions runner with
   `actions/setup-java`.
-- The JSON part is small (data services, public services, catalogs — a few
-  hundred records).
+- The JSON part is small (data services, public services — a few hundred
+  records); the whole transform runs in about 10 s.
 
 ## Division of labour
 
 SPARQL Anything does not paginate an API. So:
 
-- **fetch** (`curl` loop) pages through the API collections not on LINDAS
-  (data services, public services, catalogs) and writes
-  `raw/<collection>/page-N.json`; it also runs the `lindas/*.sparql`
-  `CONSTRUCT` queries, paged by dataset, into `raw/lindas/*.ttl`;
-- **transform** runs SPARQL Anything over the JSON files only. The LINDAS
-  Turtle is already RDF and is merged into the output unchanged.
+- **fetch** pages through the API collections into `raw/api/<collection>.json`,
+  downloads the catalog exports (merged into `raw/api/catalogs.nt`), and runs
+  the `lindas/*.sparql` `CONSTRUCT` queries, 250 datasets per request, into
+  `raw/lindas/*.nt`;
+- **transform** runs `queries/*.sparql` with SPARQL Anything: data services
+  and public services from JSON, catalog records from the export;
+- **merge** combines the mapped parts with `raw/lindas/*.nt` unchanged.
 
-This also keeps the transform reproducible offline from a saved `raw/`.
+This also keeps the transform reproducible offline from a saved `raw/`
+(`scripts/run.sh i14y --skip-fetch`).
 
 ## Mapping rules
 
@@ -35,5 +37,5 @@ This also keeps the transform reproducible offline from a saved `raw/`.
   get a new identity on every run.
 - Multilingual `{de, en, fr, it}` objects become `"..."@de` etc.
 - The SHACL shapes cover the API-derived output. The LINDAS copy is not
-  reshaped; validation only checks it is non-empty and its dataset count is
-  close to the previous run, so an upstream outage can't publish an empty graph.
+  reshaped; `checks/counts.rq` sets a minimum count per main class, so a
+  partial upstream response can't publish a near-empty graph.
