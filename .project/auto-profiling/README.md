@@ -2,8 +2,11 @@
 
 Auto-detected structures (SHACL + profiles) for opendata.swiss distributions.
 
+![auto-profiling pipeline](pipeline.svg)
+
 | File | Intent |
 |---|---|
+| [architecture.md](architecture.md) | Summary of the design discussion, flowchart, tool choices |
 | [01-purpose.md](01-purpose.md) | Goal, input, output, scope, how it fits the repo |
 | [02-model.md](02-model.md) | Output RDF model, IRIs, type mapping, cube rules |
 | [03-plan.md](03-plan.md) | Implementation phases with tasks and done criteria |

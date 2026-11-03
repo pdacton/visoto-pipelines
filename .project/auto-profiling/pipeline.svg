@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="678" viewBox="0 0 720 678" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<title>auto-profiling pipeline</title>
+<!-- Icons: Lucide v0.460.0 (ISC license), https://lucide.dev -->
+<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<rect width="720" height="678" rx="12" fill="#FFFFFF"/>
+<rect x="110.0" y="24" width="500" height="56" rx="12" fill="#F6F5F1" stroke="#B4B2A9" stroke-width="0.75"/>
+<g transform="translate(128.0,41.0) scale(0.9167)" fill="none" stroke="#5F5E5A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /> <path d="M3 5V19A9 3 0 0 0 21 19V5" /> <path d="M3 12A9 3 0 0 0 21 12" /></g>
+<text x="166.0" y="48" font-size="14" font-weight="600" fill="#2C2C2A">Select distributions</text>
+<text x="166.0" y="66" font-size="12" fill="#5F5E5A">SPARQL on opendata.swiss, dataset IRIs from datasets.txt</text>
+<line x1="360.0" y1="82" x2="360.0" y2="106" stroke="#888780" stroke-width="1" marker-end="url(#a)"/>
+<rect x="110.0" y="110" width="500" height="56" rx="12" fill="#F6F5F1" stroke="#B4B2A9" stroke-width="0.75"/>
+<g transform="translate(128.0,127.0) scale(0.9167)" fill="none" stroke="#5F5E5A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2" /> <path d="M17 3h2a2 2 0 0 1 2 2v2" /> <path d="M21 17v2a2 2 0 0 1-2 2h-2" /> <path d="M7 21H5a2 2 0 0 1-2-2v-2" /> <circle cx="12" cy="12" r="3" /> <path d="m16 16-1.9-1.9" /></g>
+<text x="166.0" y="134" font-size="14" font-weight="600" fill="#2C2C2A">Detect real format</text>
+<text x="166.0" y="152" font-size="12" fill="#5F5E5A">libmagic + content rules (Tika optional)</text>
+<line x1="360.0" y1="168" x2="360.0" y2="192" stroke="#888780" stroke-width="1" marker-end="url(#a)"/>
+<rect x="110.0" y="196" width="500" height="56" rx="12" fill="#F6F5F1" stroke="#B4B2A9" stroke-width="0.75"/>
+<g transform="translate(128.0,213.0) scale(0.9167)" fill="none" stroke="#5F5E5A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="7 10 12 15 17 10" /> <line x1="12" x2="12" y1="15" y2="3" /></g>
+<text x="166.0" y="220" font-size="14" font-weight="600" fill="#2C2C2A">Fetch sample</text>
+<text x="166.0" y="238" font-size="12" fill="#5F5E5A">HEAD, range request, ZIP directory, WFS count</text>
+<line x1="360.0" y1="254" x2="360.0" y2="278" stroke="#888780" stroke-width="1" marker-end="url(#a)"/>
+<text x="360.0" y="290" font-size="12" fill="#5F5E5A" text-anchor="middle">Infer structure, by format family</text>
+<rect x="20.0" y="300" width="680" height="96" rx="12" fill="none" stroke="#B4B2A9" stroke-width="0.75" stroke-dasharray="4 3"/>
+<rect x="30.0" y="310" width="124.0" height="76" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.75"/>
+<g transform="translate(81.0,320.0) scale(0.9167)" fill="none" stroke="#0F6E56" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" /></g>
+<text x="92.0" y="360" font-size="13" font-weight="600" fill="#085041" text-anchor="middle">Tabular</text>
+<text x="92.0" y="376" font-size="11" fill="#0F6E56" text-anchor="middle">DuckDB, Frictionless</text>
+<rect x="164.0" y="310" width="124.0" height="76" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.75"/>
+<g transform="translate(215.0,320.0) scale(0.9167)" fill="none" stroke="#0F6E56" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" /> <path d="M15 5.764v15" /> <path d="M9 3.236v15" /></g>
+<text x="226.0" y="360" font-size="13" font-weight="600" fill="#085041" text-anchor="middle">Geo</text>
+<text x="226.0" y="376" font-size="11" fill="#0F6E56" text-anchor="middle">DuckDB spatial</text>
+<rect x="298.0" y="310" width="124.0" height="76" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.75"/>
+<g transform="translate(349.0,320.0) scale(0.9167)" fill="none" stroke="#0F6E56" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3" /> <circle cx="6" cy="12" r="3" /> <circle cx="18" cy="19" r="3" /> <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /> <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></g>
+<text x="360.0" y="360" font-size="13" font-weight="600" fill="#085041" text-anchor="middle">RDF</text>
+<text x="360.0" y="376" font-size="11" fill="#0F6E56" text-anchor="middle">sheXer</text>
+<rect x="432.0" y="310" width="124.0" height="76" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.75"/>
+<g transform="translate(483.0,320.0) scale(0.9167)" fill="none" stroke="#0F6E56" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z" /> <path d="m7 16.5-4.74-2.85" /> <path d="m7 16.5 5-3" /> <path d="M7 16.5v5.17" /> <path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z" /> <path d="m17 16.5-5-3" /> <path d="m17 16.5 4.74-2.85" /> <path d="M17 16.5v5.17" /> <path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z" /> <path d="M12 8 7.26 5.15" /> <path d="m12 8 4.74-2.85" /> <path d="M12 13.5V8" /></g>
+<text x="494.0" y="360" font-size="13" font-weight="600" fill="#085041" text-anchor="middle">PX</text>
+<text x="494.0" y="376" font-size="11" fill="#0F6E56" text-anchor="middle">pyaxis</text>
+<rect x="566.0" y="310" width="124.0" height="76" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.75"/>
+<g transform="translate(617.0,320.0) scale(0.9167)" fill="none" stroke="#0F6E56" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1" /> <path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" /></g>
+<text x="628.0" y="360" font-size="13" font-weight="600" fill="#085041" text-anchor="middle">JSON / XML</text>
+<text x="628.0" y="376" font-size="11" fill="#0F6E56" text-anchor="middle">genson, XSD, lxml</text>
+<line x1="360.0" y1="398" x2="360.0" y2="422" stroke="#888780" stroke-width="1" marker-end="url(#a)"/>
+<rect x="110.0" y="426" width="500" height="56" rx="12" fill="#F6F5F1" stroke="#B4B2A9" stroke-width="0.75"/>
+<g transform="translate(128.0,443.0) scale(0.9167)" fill="none" stroke="#5F5E5A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3" /> <circle cx="6" cy="6" r="3" /> <path d="M6 21V9a9 9 0 0 0 9 9" /></g>
+<text x="166.0" y="450" font-size="14" font-weight="600" fill="#2C2C2A">Normalise</text>
+<text x="166.0" y="468" font-size="12" fill="#5F5E5A">Profile JSON, a superset of Frictionless Table Schema</text>
+<line x1="360.0" y1="484" x2="360.0" y2="508" stroke="#888780" stroke-width="1" marker-end="url(#a)"/>
+<rect x="110.0" y="512" width="500" height="56" rx="12" fill="#F6F5F1" stroke="#B4B2A9" stroke-width="0.75"/>
+<g transform="translate(128.0,529.0) scale(0.9167)" fill="none" stroke="#5F5E5A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z" /> <rect x="3" y="14" width="7" height="7" rx="1" /> <circle cx="17.5" cy="17.5" r="3.5" /></g>
+<text x="166.0" y="536" font-size="14" font-weight="600" fill="#2C2C2A">Map to SHACL</text>
+<text x="166.0" y="554" font-size="12" fill="#5F5E5A">sh:NodeShape + prof:observed, cube:Constraint where clear</text>
+<line x1="360.0" y1="570" x2="360.0" y2="594" stroke="#888780" stroke-width="1" marker-end="url(#a)"/>
+<rect x="110.0" y="598" width="500" height="56" rx="12" fill="#F6F5F1" stroke="#B4B2A9" stroke-width="0.75"/>
+<g transform="translate(128.0,615.0) scale(0.9167)" fill="none" stroke="#5F5E5A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8" /> <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /> <path d="m8 17 4-4 4 4" /></g>
+<text x="166.0" y="622" font-size="14" font-weight="600" fill="#2C2C2A">Publish</text>
+<text x="166.0" y="640" font-size="12" fill="#5F5E5A">out/auto-profiling.ttl, imported by hand into visoto-qlever</text>
+</svg>
