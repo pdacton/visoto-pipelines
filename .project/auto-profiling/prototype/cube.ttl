@@ -1,0 +1,176 @@
+@prefix csvw: <http://www.w3.org/ns/csvw#> .
+@prefix cube: <https://cube.link/> .
+@prefix meta: <https://cube.link/meta/> .
+@prefix prof: <https://example.org/prof#> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix schema: <http://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix time: <http://www.w3.org/2006/time#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://example.org/structure/bevoelkerung> a sh:NodeShape,
+        cube:Constraint ;
+    csvw:dialect [ csvw:delimiter ";" ;
+            csvw:header true ] ;
+    sh:closed true ;
+    sh:property [ sh:in ( cube:Observation ) ;
+            sh:nodeKind sh:IRI ;
+            sh:path rdf:type ],
+        [ sh:nodeKind sh:IRI ;
+            sh:path cube:observedBy ],
+        <https://example.org/structure/bevoelkerung/anteil_auslaender>,
+        <https://example.org/structure/bevoelkerung/bfs_nr>,
+        <https://example.org/structure/bevoelkerung/einwohner>,
+        <https://example.org/structure/bevoelkerung/flaeche_km2>,
+        <https://example.org/structure/bevoelkerung/gemeinde>,
+        <https://example.org/structure/bevoelkerung/hauptort>,
+        <https://example.org/structure/bevoelkerung/kanton>,
+        <https://example.org/structure/bevoelkerung/stichtag> .
+
+<https://example.org/structure/bevoelkerung/anteil_auslaender> a sh:PropertyShape,
+        cube:MeasureDimension ;
+    qudt:scaleType qudt:RatioScale ;
+    schema:name "Anteil_Auslaender_%" ;
+    sh:datatype xsd:decimal ;
+    sh:maxCount 1 ;
+    sh:minCount 0 ;
+    sh:name "Anteil_Auslaender_%" ;
+    sh:order 5 ;
+    sh:path <https://example.org/structure/bevoelkerung/col/anteil_auslaender> ;
+    prof:observed [ prof:approxUnique 50 ;
+            prof:count 60 ;
+            prof:max "46.9" ;
+            prof:mean "30.43859649122806" ;
+            prof:min "15.1" ;
+            prof:nullPercentage 5e+00 ;
+            prof:q50 "31.7" ] .
+
+<https://example.org/structure/bevoelkerung/bfs_nr> a sh:PropertyShape,
+        cube:KeyDimension ;
+    qudt:scaleType qudt:NominalScale ;
+    schema:name "BFS_Nr" ;
+    sh:datatype xsd:integer ;
+    sh:in ( 261 351 371 2196 5586 6621 ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "BFS_Nr" ;
+    sh:order 0 ;
+    sh:path <https://example.org/structure/bevoelkerung/col/bfs_nr> ;
+    prof:observed [ prof:approxUnique 6 ;
+            prof:count 60 ;
+            prof:max "6621" ;
+            prof:mean "2564.3333333333335" ;
+            prof:min "261" ;
+            prof:nullPercentage 0e+00 ;
+            prof:q50 "1284" ] .
+
+<https://example.org/structure/bevoelkerung/einwohner> a sh:PropertyShape,
+        cube:MeasureDimension ;
+    qudt:scaleType qudt:RatioScale ;
+    schema:name "Einwohner" ;
+    sh:datatype xsd:integer ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Einwohner" ;
+    sh:order 4 ;
+    sh:path <https://example.org/structure/bevoelkerung/col/einwohner> ;
+    prof:observed [ prof:approxUnique 60 ;
+            prof:count 60 ;
+            prof:max "428953" ;
+            prof:mean "250377.18333333332" ;
+            prof:min "24446" ;
+            prof:nullPercentage 0e+00 ;
+            prof:q50 "265194" ] .
+
+<https://example.org/structure/bevoelkerung/flaeche_km2> a sh:PropertyShape,
+        cube:MeasureDimension ;
+    qudt:scaleType qudt:RatioScale ;
+    schema:name "Flaeche_km2" ;
+    sh:datatype xsd:decimal ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Flaeche_km2" ;
+    sh:order 6 ;
+    sh:path <https://example.org/structure/bevoelkerung/col/flaeche_km2> ;
+    prof:observed [ prof:approxUnique 62 ;
+            prof:count 60 ;
+            prof:max "88.14" ;
+            prof:mean "56.563666666666656" ;
+            prof:min "21.78" ;
+            prof:nullPercentage 0e+00 ;
+            prof:q50 "58.255" ] .
+
+<https://example.org/structure/bevoelkerung/gemeinde> a sh:PropertyShape,
+        cube:KeyDimension ;
+    qudt:scaleType qudt:NominalScale ;
+    schema:name "Gemeinde" ;
+    sh:datatype xsd:string ;
+    sh:in ( "Bern"^^xsd:string "Biel/Bienne"^^xsd:string "Fribourg"^^xsd:string "Genève"^^xsd:string "Lausanne"^^xsd:string "Zürich"^^xsd:string ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Gemeinde" ;
+    sh:order 1 ;
+    sh:path <https://example.org/structure/bevoelkerung/col/gemeinde> ;
+    prof:observed [ prof:approxUnique 6 ;
+            prof:count 60 ;
+            prof:max "Zürich" ;
+            prof:min "Bern" ;
+            prof:nullPercentage 0e+00 ] .
+
+<https://example.org/structure/bevoelkerung/hauptort> a sh:PropertyShape,
+        cube:KeyDimension ;
+    qudt:scaleType qudt:NominalScale ;
+    schema:name "Hauptort" ;
+    sh:datatype xsd:string ;
+    sh:in ( "ja"^^xsd:string "nein"^^xsd:string ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Hauptort" ;
+    sh:order 7 ;
+    sh:path <https://example.org/structure/bevoelkerung/col/hauptort> ;
+    prof:observed [ prof:approxUnique 2 ;
+            prof:count 60 ;
+            prof:max "nein" ;
+            prof:min "ja" ;
+            prof:nullPercentage 0e+00 ] .
+
+<https://example.org/structure/bevoelkerung/kanton> a sh:PropertyShape,
+        cube:KeyDimension ;
+    qudt:scaleType qudt:NominalScale ;
+    schema:name "Kanton" ;
+    sh:datatype xsd:string ;
+    sh:in ( "BE"^^xsd:string "FR"^^xsd:string "GE"^^xsd:string "VD"^^xsd:string "ZH"^^xsd:string ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Kanton" ;
+    sh:order 2 ;
+    sh:path <https://example.org/structure/bevoelkerung/col/kanton> ;
+    prof:observed [ prof:approxUnique 5 ;
+            prof:count 60 ;
+            prof:max "ZH" ;
+            prof:min "BE" ;
+            prof:nullPercentage 0e+00 ] .
+
+<https://example.org/structure/bevoelkerung/stichtag> a sh:PropertyShape,
+        cube:KeyDimension ;
+    qudt:scaleType qudt:IntervalScale ;
+    schema:name "Stichtag" ;
+    sh:datatype xsd:date ;
+    sh:in ( "2015-12-31"^^xsd:date "2016-12-31"^^xsd:date "2017-12-31"^^xsd:date "2018-12-31"^^xsd:date "2019-12-31"^^xsd:date "2020-12-31"^^xsd:date "2021-12-31"^^xsd:date "2022-12-31"^^xsd:date "2023-12-31"^^xsd:date "2024-12-31"^^xsd:date ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Stichtag" ;
+    sh:order 3 ;
+    sh:path <https://example.org/structure/bevoelkerung/col/stichtag> ;
+    meta:dataKind [ a time:GeneralDateTimeDescription ;
+            time:unitType time:unitDay ] ;
+    prof:observed [ prof:approxUnique 10 ;
+            prof:count 60 ;
+            prof:max "2024-12-31" ;
+            prof:mean "2020-07-01 00:00:00" ;
+            prof:min "2015-12-31" ;
+            prof:nullPercentage 0e+00 ;
+            prof:q50 "2020-07-01" ] .
+
+
