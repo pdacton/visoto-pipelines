@@ -1,0 +1,31 @@
+# opendata.swiss dataset IRIs to profile, one per line; `#` comments and blank lines are ignored.
+# Test list: at least one dataset per format family (picked on opendata.next ABN, 2026-11-03).
+
+# CSV (BFE, plain file)
+https://opendata.swiss/set/data/cc2df3d1-cfa5-41a1-8087-32995961ef70
+# Opendatasoft: Parquet represents the table exports, Turtle the RDF exports
+https://opendata.swiss/set/data/100158-kanton-basel-stadt
+# Opendatasoft (Fribourg), the example from the design discussion
+https://opendata.swiss/set/data/00_01_liste_menages_collectifs_lhr-ssd
+# XLSX and JSON (BFE solar potential)
+https://opendata.swiss/set/data/0a59f4f8-22a7-4f6a-b499-9f62f9452ecb
+# ODS (BFS, URL without extension)
+https://opendata.swiss/set/data/24306836-bundesamt-fur-statistik-bfs
+# XLS (EnviDat)
+https://opendata.swiss/set/data/10-16904_envidat-379-envidat
+# SHP and GPKG, both zipped (Solothurn)
+https://opendata.swiss/set/data/9478f408-30af-4e74-94ad-444b7ef197cc
+# CSV, SHP and GML in ZIPs, plus WFS (SITG Geneva)
+https://opendata.swiss/set/data/dps_fortifications
+# WFS with many layers (Uri)
+https://opendata.swiss/set/data/ur-1898
+# PX through PxWeb (BFS)
+https://opendata.swiss/set/data/241093-bundesamt-fur-statistik-bfs
+# PX|JSON: PxWeb API link (Liechtenstein)
+https://opendata.swiss/set/data/251-501d
+# XML and records-in-JSON (Grosser Rat Bern)
+https://opendata.swiss/set/data/ktbe-apm0002162-wahlresultatetagblattgr-v1
+# CSV, GeoJSON and JSON with records under one property (Stadtklima Zürich)
+https://opendata.swiss/set/data/112266f7-b7aa-42e5-9bbd-c4c76f12f50a-stadt-zurich
+# Nested JSON: a vector tile style (swisstopo)
+https://opendata.swiss/set/data/77ccb73b-2867-4036-92c4-0a96bda8f45b

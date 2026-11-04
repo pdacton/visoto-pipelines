@@ -1,0 +1,235 @@
+{
+ "id": "bevoelkerung",
+ "dataset": "https://opendata.swiss/set/data/bevoelkerung-test",
+ "representative": "https://opendata.swiss/set/distribution/bevoelkerung-test",
+ "distributions": [
+  "https://opendata.swiss/set/distribution/bevoelkerung-test"
+ ],
+ "url": "https://example.org/bevoelkerung.csv",
+ "declared": [
+  "CSV"
+ ],
+ "sniffed": "CSV",
+ "formatMatch": true,
+ "status": "profiled",
+ "engine": "tabular",
+ "parts": [
+  {
+   "slug": "main",
+   "rowCount": 60,
+   "dialect": {
+    "delimiter": ";",
+    "header": true,
+    "dateFormat": "%d.%m.%Y",
+    "encoding": "utf-8"
+   },
+   "keysUnique": true,
+   "fields": [
+    {
+     "name": "BFS_Nr",
+     "type": "integer",
+     "categorical": true,
+     "stats": {
+      "duckdbType": "BIGINT",
+      "count": 60,
+      "nullPercentage": 0.0,
+      "distinct": 6,
+      "min": 261,
+      "max": 6621,
+      "mean": 2564.3333333333335,
+      "std": 2627.674854551631,
+      "q25": 351,
+      "q50": 1284,
+      "q75": 5586,
+      "values": [
+       261,
+       351,
+       371,
+       2196,
+       5586,
+       6621
+      ]
+     },
+     "examples": [
+      "351",
+      "371",
+      "2196"
+     ]
+    },
+    {
+     "name": "Gemeinde",
+     "type": "string",
+     "categorical": true,
+     "stats": {
+      "duckdbType": "VARCHAR",
+      "count": 60,
+      "nullPercentage": 0.0,
+      "distinct": 6,
+      "min": "Bern",
+      "max": "Zürich",
+      "values": [
+       "Bern",
+       "Biel/Bienne",
+       "Fribourg",
+       "Genève",
+       "Lausanne",
+       "Zürich"
+      ]
+     },
+     "examples": [
+      "Bern",
+      "Biel/Bienne",
+      "Fribourg"
+     ]
+    },
+    {
+     "name": "Kanton",
+     "type": "string",
+     "categorical": true,
+     "stats": {
+      "duckdbType": "VARCHAR",
+      "count": 60,
+      "nullPercentage": 0.0,
+      "distinct": 5,
+      "min": "BE",
+      "max": "ZH",
+      "values": [
+       "BE",
+       "FR",
+       "GE",
+       "VD",
+       "ZH"
+      ]
+     },
+     "examples": [
+      "BE",
+      "FR",
+      "ZH"
+     ]
+    },
+    {
+     "name": "Stichtag",
+     "type": "date",
+     "format": "%d.%m.%Y",
+     "categorical": true,
+     "stats": {
+      "duckdbType": "DATE",
+      "count": 60,
+      "nullPercentage": 0.0,
+      "distinct": 10,
+      "min": "2015-12-31",
+      "max": "2024-12-31",
+      "q25": "2017-12-31",
+      "q50": "2020-07-01",
+      "q75": "2022-12-31",
+      "values": [
+       "2015-12-31",
+       "2016-12-31",
+       "2017-12-31",
+       "2018-12-31",
+       "2019-12-31",
+       "2020-12-31",
+       "2021-12-31",
+       "2022-12-31",
+       "2023-12-31",
+       "2024-12-31"
+      ]
+     },
+     "examples": [
+      "2015-12-31",
+      "2016-12-31",
+      "2017-12-31"
+     ]
+    },
+    {
+     "name": "Einwohner",
+     "type": "integer",
+     "stats": {
+      "duckdbType": "BIGINT",
+      "count": 60,
+      "nullPercentage": 0.0,
+      "distinct": 60,
+      "min": 24446,
+      "max": 428953,
+      "mean": 250377.18333333332,
+      "std": 112718.39681551869,
+      "q25": 165781,
+      "q50": 265194,
+      "q75": 344956
+     },
+     "examples": [
+      "90445",
+      "81823",
+      "130076"
+     ]
+    },
+    {
+     "name": "Anteil_Auslaender_%",
+     "type": "number",
+     "stats": {
+      "duckdbType": "DOUBLE",
+      "count": 60,
+      "nullPercentage": 5.0,
+      "distinct": 50,
+      "min": 15.1,
+      "max": 46.9,
+      "mean": 30.43859649122806,
+      "std": 9.599976830068112,
+      "q25": 22.425,
+      "q50": 31.7,
+      "q75": 36.925
+     },
+     "examples": [
+      "41.5",
+      "29.8",
+      "15.9"
+     ]
+    },
+    {
+     "name": "Flaeche_km2",
+     "type": "number",
+     "stats": {
+      "duckdbType": "DOUBLE",
+      "count": 60,
+      "nullPercentage": 0.0,
+      "distinct": 62,
+      "min": 21.78,
+      "max": 88.14,
+      "mean": 56.563666666666656,
+      "std": 19.79521162495709,
+      "q25": 38.485,
+      "q50": 58.255,
+      "q75": 72.535
+     },
+     "examples": [
+      "24.42",
+      "65.61",
+      "78.5"
+     ]
+    },
+    {
+     "name": "Hauptort",
+     "type": "string",
+     "categorical": true,
+     "booleanCandidate": true,
+     "stats": {
+      "duckdbType": "VARCHAR",
+      "count": 60,
+      "nullPercentage": 0.0,
+      "distinct": 2,
+      "min": "ja",
+      "max": "nein",
+      "values": [
+       "ja",
+       "nein"
+      ]
+     },
+     "examples": [
+      "ja",
+      "nein"
+     ]
+    }
+   ]
+  }
+ ]
+}

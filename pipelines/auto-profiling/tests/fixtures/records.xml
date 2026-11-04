@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ObjectNode>
+  <exportDate>2026-11-03 00:00</exportDate>
+  <data id="1"><titel>A</titel><anzahl>147</anzahl><datum>2026-01-05</datum></data>
+  <data id="2"><titel>B</titel><anzahl>153</anzahl><datum>2026-02-07</datum><notiz>x</notiz></data>
+  <data id="3"><titel>A</titel><anzahl></anzahl><datum>2026-03-09</datum></data>
+</ObjectNode>

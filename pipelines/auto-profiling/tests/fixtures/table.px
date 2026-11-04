@@ -1,0 +1,20 @@
+CHARSET="ANSI";
+AXIS-VERSION="2010";
+CODEPAGE="iso-8859-15";
+LANGUAGE="de";
+DECIMALS=0;
+MATRIX="px-x-test";
+SUBJECT-CODE="01";
+SUBJECT-AREA="Bevoelkerung";
+TITLE="Bevoelkerung nach Jahr und Kanton";
+CONTENTS="Bevoelkerung";
+UNITS="Personen";
+STUB="Jahr";
+HEADING="Kanton";
+VALUES("Jahr")="2022","2023";
+VALUES("Kanton")="Schweiz","Zuerich";
+CODES("Kanton")="0","1";
+TIMEVAL("Jahr")=TLIST(A1),"2022","2023";
+DATA=
+8815385 1553423
+8962258 1579967;

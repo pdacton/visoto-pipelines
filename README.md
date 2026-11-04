@@ -8,11 +8,18 @@ the upload modal's URL tab into the named graph `urn:data:<name>-githubpipeline`
 | Pipeline | Turtle | Plan |
 |---|---|---|
 | I14Y | [i14y.ttl](https://github.com/pdacton/visoto-pipelines/releases/download/i14y-latest/i14y.ttl) | [.project/i14y](.project/i14y) |
+| Auto-profiling (structures of opendata.swiss distributions) | local run only, `out/auto-profiling.ttl` | [.project/auto-profiling](.project/auto-profiling) |
 
 ## Run locally
 
 Needs `bash`, `curl` and Java 21+ (or a JRE unpacked into `.tools/`). SPARQL
 Anything, Jena and jq are downloaded into `.tools/` on first use.
+
+Python pipelines (`auto-profiling`) also need Python 3.12 and libmagic
+(`libmagic1`, present wherever `file` is installed). They run through
+[uv](https://docs.astral.sh/uv/): taken from the `PATH`, or a pinned copy is
+downloaded into `.tools/`; `uv` installs the pipeline's locked dependencies on
+first use.
 
 ```sh
 scripts/run.sh i14y               # fetch → transform → validate → meta
@@ -22,8 +29,19 @@ scripts/publish.sh i14y           # replace the release assets (needs gh auth)
 
 Output: `pipelines/i14y/out/i14y.ttl` and `i14y.meta.json`.
 
+```sh
+scripts/run.sh auto-profiling                # resolve → fetch → profile → emit → validate
+scripts/run.sh auto-profiling --skip-fetch   # re-profile offline from the saved samples
+DATASETS=datasets-large.txt scripts/run.sh auto-profiling
+(cd pipelines/auto-profiling && uv run pytest)
+```
+
+Output: `pipelines/auto-profiling/out/auto-profiling.ttl`, plus `out/report.md`.
+
 ## Adding a pipeline
 
 Create `pipelines/<name>/` with `pipeline.env`, `fetch.sh`, `queries/*.sparql`
 and `shapes.ttl` (optionally `checks/*.rq`), and a workflow that calls
-`pipeline.yml` with `name: <name>`. See [.project/i14y/01-purpose.md](.project/i14y/01-purpose.md).
+`pipeline.yml` with `name: <name>`. A pipeline with an executable
+`transform.sh` runs that instead of the `queries/*.sparql` mappings; it writes
+`out/parts/*.nt`, which `scripts/run.sh` merges as usual. See [.project/i14y/01-purpose.md](.project/i14y/01-purpose.md).

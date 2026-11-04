@@ -1,0 +1,3 @@
+{"title":"Bevölkerung nach Jahr und Kanton","variables":[
+ {"code":"Jahr","text":"Jahr","values":["2022","2023"],"valueTexts":["2022","2023"],"time":true},
+ {"code":"Kanton","text":"Kanton","values":["0","1"],"valueTexts":["Schweiz","Zürich"],"elimination":true}]}

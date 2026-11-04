@@ -3,3 +3,8 @@
 # Pipeline working files
 pipelines/*/raw/
 pipelines/*/out/
+# Python environments and sample cache of Python pipelines
+pipelines/*/.venv/
+pipelines/*/cache/
+__pycache__/
+.pytest_cache/

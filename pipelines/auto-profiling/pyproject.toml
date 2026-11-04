@@ -1,0 +1,28 @@
+[project]
+name = "autoprof"
+version = "0.1.0"
+description = "Auto-detected structures (SHACL + profiles) for opendata.swiss distributions"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "duckdb==2.0.*",
+  "frictionless[excel,ods,parquet]==5.21.*",
+  "rdflib>=7.6",
+  "httpx>=0.28",
+  "python-magic>=0.4.27",
+  "pyaxis>=0.4.3",
+  "genson>=1.4",
+  "lxml>=6.1",
+  "shexer>=2.7",
+  "pyogrio>=0.13",
+  "pytz",            # DuckDB converts TIMESTAMPTZ through it
+  "pebble>=5.2.3",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "pyshacl>=0.40"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

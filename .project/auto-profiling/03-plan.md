@@ -1,7 +1,11 @@
 # Implementation plan
 
+Status: phases 0–9 implemented on one branch and PR (2026-11-03), except
+verifying a manual import in visoto-qlever. Deviations from this plan are
+listed under [Implementation notes](#implementation-notes-2026-11-03).
+
 The pipeline is built in phases. Each phase ends in a working
-`scripts/run.sh auto-profiling` and is its own PR. Phases 0–4 give a usable
+`scripts/run.sh auto-profiling` and was planned as its own PR. Phases 0–4 give a usable
 pipeline for tabular data. Phases 5–8 add one format family each and are
 independent of each other.
 
@@ -26,7 +30,7 @@ Conventions for every phase:
 
 Goal: an empty pipeline that runs end to end and validates.
 
-- [ ] `pipelines/auto-profiling/` with:
+- [x] `pipelines/auto-profiling/` with:
   - `pipeline.env`: `NAME=auto-profiling`,
     `GRAPH=urn:data:auto-profiling-githubpipeline`, `LABEL`,
     `ODS_ENDPOINT=https://trifid.abn.ods.zazukoians.org/query`,
@@ -42,10 +46,10 @@ Goal: an empty pipeline that runs end to end and validates.
     `fetch`, `profile`, `emit`.
   - `vocab/prof.ttl`, `shapes.ttl` (shapes for the output itself),
     `checks/` (empty).
-- [ ] `scripts/run.sh`: if `$PIPELINE_DIR/transform.sh` exists, run it instead
+- [x] `scripts/run.sh`: if `$PIPELINE_DIR/transform.sh` exists, run it instead
   of the `queries/*.sparql` loop, then merge `out/parts/*.nt`. The `i14y`
   pipeline must behave exactly as before.
-- [ ] Root `README.md`: add the pipeline to the table and note the Python/uv
+- [x] Root `README.md`: add the pipeline to the table and note the Python/uv
   requirement.
 
 Done when `scripts/run.sh auto-profiling` produces a valid (near-empty)
@@ -55,16 +59,16 @@ Done when `scripts/run.sh auto-profiling` produces a valid (near-empty)
 
 Goal: dataset IRIs → `raw/distributions.json`.
 
-- [ ] SPARQL against `ODS_ENDPOINT`, in batches of 100 datasets with
+- [x] SPARQL against `ODS_ENDPOINT`, in batches of 100 datasets with
   `VALUES ?dataset { … }`. Return dataset, distribution, `downloadURL`,
   `accessURL`, `dct:format`, `dcat:mediaType`, `dct:title`, `dct:modified` and
   `dct:identifier`. The base is the selection query from 2026-11-03.
-- [ ] Compute the declared types from format, media type and URL extension
+- [x] Compute the declared types from format, media type and URL extension
   (the mapping table in `autoprof/formats.py`). Keep conflicts as a list, for
   example `["PX","JSON"]`.
-- [ ] Group equivalent distributions per dataset (same publisher export, see
+- [x] Group equivalent distributions per dataset (same publisher export, see
   [02-model.md](02-model.md)) and mark one representative per group.
-- [ ] Record unknown dataset IRIs and datasets without distributions in
+- [x] Record unknown dataset IRIs and datasets without distributions in
   `raw/resolve-report.json`.
 
 Done when the test datasets resolve and the per-type counts match the visoto
@@ -76,14 +80,14 @@ cases).
 Goal: a small, reusable sample per representative distribution, plus its
 sniffed format.
 
-- [ ] Async `httpx` client:
+- [x] Async `httpx` client:
   - `CONCURRENCY` overall, `PER_HOST` per host, retries with backoff.
   - User-Agent `visoto-pipelines/auto-profiling`.
-- [ ] `HEAD` request, then a ranged `GET` of the first 64 KB. Sniff the bytes
+- [x] `HEAD` request, then a ranged `GET` of the first 64 KB. Sniff the bytes
   with libmagic plus the content rules (Parquet `PAR1`, GPKG application_id,
   first ZIP entry, OLE2, PX keywords, `@context`/`FeatureCollection`, XML
   root namespace, Turtle prefixes, `csv.Sniffer`, HTML rejection).
-- [ ] Sample by format:
+- [x] Sample by format:
   - **Parquet:** the footer via a tail range request; download in full if
     under `MAX_DOWNLOAD_MB`.
   - **ZIP:** read the central directory from the tail; fetch the whole file
@@ -94,11 +98,11 @@ sniffed format.
     `GetFeature&count=SAMPLE_ROWS`.
   - **XLS, XLSX, ODS, GPKG:** in full if under the limit, otherwise
     `skipped(too-large)`.
-- [ ] Store the samples as `raw/samples/{id}.{ext}`.
-- [ ] Write `raw/sniff.json` with, per distribution: declared, sniffed,
+- [x] Store the samples as `raw/samples/{id}.{ext}`.
+- [x] Write `raw/sniff.json` with, per distribution: declared, sniffed,
   match, HTTP status, bytes, sample path, and a status of `ok`, `skipped` or
   `failed` with a reason.
-- [ ] Cache by URL plus ETag or Last-Modified in `raw/cache.json`, so a rerun
+- [x] Cache by URL plus ETag or Last-Modified in `raw/cache.json`, so a rerun
   only refetches what changed.
 
 Done when every test dataset ends with a sniffed format or an explicit
@@ -110,26 +114,26 @@ and sniffing must have unit tests on fixture bytes.
 Goal: the normalised profile JSON and its SHACL serialisation, before any
 real engine exists.
 
-- [ ] `autoprof/model.py`: dataclasses for `Structure`, `Part`, `Field` and
+- [x] `autoprof/model.py`: dataclasses for `Structure`, `Part`, `Field` and
   `Profile`, matching the JSON interchange in [02-model.md](02-model.md)
   (a superset of Frictionless Table Schema).
-- [ ] `autoprof/emit.py`:
+- [x] `autoprof/emit.py`:
   - `out/profiles/*.json` → `out/parts/*.nt`.
   - Mint IRIs from `BASE_IRI`.
   - Link `dct:conformsTo` from every distribution in the group.
   - Write the Table Schema → SHACL mapping, the optional `cube:Constraint`
     (with the confidence rule), `prof:observed`, provenance, and the status
     stubs for skipped and failed distributions.
-- [ ] Copy `vocab/prof.ttl` into the parts.
-- [ ] `shapes.ttl`: every `prof:Structure` has at least one `dct:hasPart`;
+- [x] Copy `vocab/prof.ttl` into the parts.
+- [x] `shapes.ttl`: every `prof:Structure` has at least one `dct:hasPart`;
   every `sh:PropertyShape` has `sh:name`, `sh:path` and `sh:order`; every
   structure has `prov:wasGeneratedBy`.
-- [ ] `checks/`:
+- [x] `checks/`:
   - `no-orphan-shapes.rq`
   - `conformsTo-resolves.rq` (every `dct:conformsTo` target exists)
   - `status-set.rq` (every resolved distribution has a structure or a
     status)
-- [ ] Golden-file tests: fixture profile JSON → expected Turtle. Include the
+- [x] Golden-file tests: fixture profile JSON → expected Turtle. Include the
   `bevoelkerung` example from 2026-11-03, which must give the `cube.ttl`
   equivalent.
 
@@ -140,18 +144,18 @@ Done when the golden tests pass and the output validates with
 
 Goal: real structures for CSV, XLSX, XLS, ODS, Parquet and tabular JSON.
 
-- [ ] Port `infer_tabular.py` (2026-11-03 prototype) to `autoprof/engines/tabular.py`:
+- [x] Port `infer_tabular.py` (2026-11-03 prototype) to `autoprof/engines/tabular.py`:
   - Frictionless `describe` for field names and types.
   - DuckDB for `sniff_csv`, `SUMMARIZE`, samples and distinct values when there
     are 50 or fewer.
   - Type reconciliation: DuckDB dates win over a Frictionless `string`.
   - Categorical and boolean-candidate hints, missing-value tokens.
-- [ ] One part per sheet for XLSX, XLS and ODS. Detect header rows (skip
+- [x] One part per sheet for XLSX, XLS and ODS. Detect header rows (skip
   leading title rows, merged header lines) and record them as
   `csvw:dialect`.
-- [ ] JSON only when the root, or a single top-level array property, holds
+- [x] JSON only when the root, or a single top-level array property, holds
   records; otherwise hand over to the tree engine (phase 7).
-- [ ] DuckDB connection: `memory_limit=512MB`, `threads=2`, a temp directory
+- [x] DuckDB connection: `memory_limit=512MB`, `threads=2`, a temp directory
   under `out/tmp`.
 
 Done when all tabular test datasets produce structures in visoto-qlever
@@ -160,13 +164,13 @@ minutes for the test list.
 
 ## Phase 5: Geo engine
 
-- [ ] `ST_Read` via DuckDB `spatial`:
+- [x] `ST_Read` via DuckDB `spatial`:
   - SHP inside ZIP (`/vsizip/`), GPKG and GML.
   - WFS from `DescribeFeatureType` plus the `GetFeature` sample.
-- [ ] One part per layer, with `prof:geometryType`, `prof:crs`, a geometry
+- [x] One part per layer, with `prof:geometryType`, `prof:crs`, a geometry
   field (`geo:wktLiteral`), and attribute fields as in tabular, including
   stats.
-- [ ] Fall back to `ogrinfo -json -so` (pyogrio) if `ST_Read` fails on a
+- [x] Fall back to `ogrinfo -json -so` (pyogrio) if `ST_Read` fails on a
   driver.
 
 Done when the SHP, GPKG, GML and WFS test datasets have structures with CRS
@@ -174,26 +178,26 @@ and geometry type.
 
 ## Phase 6: PX engine
 
-- [ ] Parse `.px` with pyaxis. For PxWeb (`PX|JSON`), use the table metadata
+- [x] Parse `.px` with pyaxis. For PxWeb (`PX|JSON`), use the table metadata
   endpoint instead of downloading data.
-- [ ] Dimensions, with codes and labels per language, become
+- [x] Dimensions, with codes and labels per language, become
   `cube:KeyDimension` with `sh:in`. The content variable becomes
   `cube:MeasureDimension`, with `UNITS` mapped to `qudt:unit` where possible
   and kept as a literal otherwise. `TIMEVAL` becomes `meta:dataKind`.
-- [ ] Always emit `cube:Constraint`.
+- [x] Always emit `cube:Constraint`.
 
 Done when the PX test datasets produce a `cube:Constraint` that validates.
 
 ## Phase 7: Tree engine (JSON, XML)
 
-- [ ] **JSON:** use genson to infer a JSON Schema from the sample, then map it
+- [x] **JSON:** use genson to infer a JSON Schema from the sample, then map it
   to SHACL with `sh:node` for nested objects and `sh:maxCount` from array or
   object. Paths are JSON Pointer style names under the column IRI.
-- [ ] **XML:** if `xsi:schemaLocation` points to a reachable XSD, map its
+- [x] **XML:** if `xsi:schemaLocation` points to a reachable XSD, map its
   elements and types. Otherwise build element/attribute path statistics with
   lxml (counts, optionality, leaf value types inferred like tabular) and map
   them to nested node shapes.
-- [ ] Detect GML, RDF/XML and GeoJSON and route them to their own engines, or
+- [x] Detect GML, RDF/XML and GeoJSON and route them to their own engines, or
   record them as skipped.
 
 Done when the JSON and XML test datasets produce nested structures, with a
@@ -201,22 +205,22 @@ depth limit of 6 and a property limit of 200 per node.
 
 ## Phase 8: RDF engine
 
-- [ ] Parse the sample with rdflib, with a triple cap
+- [x] Parse the sample with rdflib, with a triple cap
   (`SAMPLE_ROWS × 10`). Run sheXer to get SHACL, and keep the constraint
   support ratios as `prof:observed`.
-- [ ] Profile one serialisation per group (prefer Turtle).
+- [x] Profile one serialisation per group (prefer Turtle).
 
 Done when the RDF test datasets produce shapes per class.
 
 ## Phase 9: Hardening and first real run
 
-- [ ] `out/report.md`:
+- [x] `out/report.md`:
   - Counts per family and status.
   - The declared-versus-sniffed mismatch table.
   - The 20 slowest distributions and the failures with their reasons.
-- [ ] Run on a larger list (about 500 datasets drawn from the 2026-11-03
+- [x] Run on a larger list (about 500 datasets drawn from the 2026-11-03
   selection) and fix the top failure causes.
-- [ ] Document the import in `01-purpose.md`: upload `out/auto-profiling.ttl`
+- [x] Document the import in `01-purpose.md`: upload `out/auto-profiling.ttl`
   to `visoto-qlever`, graph `urn:data:auto-profiling-githubpipeline`, using
   replace on load, which is an open question for the i14y pipeline as well.
 - [ ] Verify the import with the visoto MCP: count `prof:Structure`,
@@ -224,3 +228,56 @@ Done when the RDF test datasets produce shapes per class.
 
 Done when the larger run finishes unattended, with failures explained in the
 report.
+
+## Implementation notes (2026-11-03)
+
+Where the implementation differs from, or adds to, the plan above:
+
+- **Cache location:** `scripts/run.sh` wipes `raw/` before every fetch, so the
+  ETag/Last-Modified cache and its samples live in `cache/` (gitignored);
+  `raw/samples/` holds hard links to them.
+- **`${VAR:-default}` in `pipeline.env`:** `BASE_IRI`, `SAMPLE_ROWS` and
+  `DATASETS` can be overridden from the environment
+  (`DATASETS=datasets-large.txt scripts/run.sh auto-profiling`).
+- **Equivalence groups:** Opendatasoft exports form two groups per table: the
+  table exports (Parquet representative) and the RDF exports (Turtle
+  representative), so the RDF engine profiles the publisher's own RDF model.
+  PxWeb links to one table (per language, and BFS `/asset/` pages) form one
+  group. Each group lists up to three fallbacks, tried when the
+  representative fails.
+- **Fetch:** one streamed GET serves both the 64 KB sniff and the sample (after
+  a HEAD for validators and size), instead of a separate ranged GET. Range
+  requests are used where the tail matters: Parquet footers and ZIP central
+  directories of files above `MAX_DOWNLOAD_MB` (read through a sparse local
+  file). XML samples may be truncated (parsed with recovery); JSON, GML and
+  RDF/XML must fit the limit. The XSD named by `xsi:schemaLocation` is fetched
+  next to an XML sample.
+- **WFS:** `WFS_MAX_LAYERS` (20) layers per service and `WFS_FEATURES` (1000)
+  features per layer instead of `count=SAMPLE_ROWS`: services list hundreds of
+  layers.
+- **PxWeb:** the table metadata JSON in every available language (de, fr, it,
+  en) plus a one-cell PX from a POST query, which carries the keywords the
+  JSON lacks (`UNITS`, `CONTVARIABLE`, `DECIMALS`, `TIMEVAL`). Without
+  `CONTVARIABLE` there is one measure (`value`), and every variable, including
+  a "Variable" dimension, is a key dimension.
+- **Geo:** curve geometries (MultiCurve, CompoundCurve, ...) that DuckDB can't
+  convert are read with `keep_wkb=true`; the CRS falls back to the GML
+  `srsName`; INTERLIS bookkeeping tables (`T_ILI2DB_*`) are skipped.
+- **RDF:** sheXer writes `sh:dataType`; it is read back as `sh:datatype`.
+  Support ratios and value statistics are computed per class and predicate
+  with rdflib (`prof:support`), and properties below sheXer's threshold are
+  kept as optional.
+- **Statuses** are IRIs (`prof:profiled`, `prof:skipped`, `prof:failed`); a
+  skipped or failed structure carries a reason and no parts, and every
+  distribution of its group points to it. Distributions are typed
+  `dcat:Distribution` and linked from their dataset, so the output is usable
+  without the ODS catalogue.
+- **Statistics as literals:** `prof:mean`, `prof:std`, `prof:nullPercentage`
+  and `prof:support` are `xsd:decimal` rounded to 4 places; min, max and
+  quartiles take the field's datatype where valid.
+- **Extra vocabulary:** `prof:codeLabel` (SKOS notation and labels per
+  language, PX), `prof:unitLabel`, `prof:sourceName`, `prof:format`,
+  `prof:dateFormat`, `prof:recordsPath`, `prof:support`, `prof:maxItems`,
+  `prof:categorical`, `prof:booleanCandidate`; see `vocab/prof.ttl`.
+- **Test list:** 14 datasets in `datasets.txt`; `datasets-large.txt` holds the
+  500-dataset sample for phase 9.

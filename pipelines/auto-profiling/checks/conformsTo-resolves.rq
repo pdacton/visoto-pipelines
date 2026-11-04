@@ -1,0 +1,7 @@
+# Every dct:conformsTo target is a structure in the output.
+PREFIX dct: <http://purl.org/dc/terms/>
+SELECT ?problem WHERE {
+  ?distribution dct:conformsTo ?target .
+  FILTER NOT EXISTS { ?target a ?class FILTER(STRENDS(STR(?class), "prof#Structure")) }
+  BIND(CONCAT(STR(?distribution), " conforms to missing ", STR(?target)) AS ?problem)
+}

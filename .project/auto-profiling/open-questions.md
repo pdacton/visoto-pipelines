@@ -17,3 +17,15 @@
   step. It is deliberately out of scope here.
 - **Scheduling:** whether to add a GitHub Actions workflow once the network
   constraints are understood. It runs locally for now.
+- **PxWeb tables per language:** Liechtenstein publishes one table per
+  language under different names (`251.501d`, `251.501e`); they are profiled
+  as separate structures. BFS tables in several languages are one structure
+  with labels per language.
+- **Opendatasoft RDF exports:** profiled as their own structure (classes and
+  predicates of the publisher's RDF model), next to the table structure of the
+  other exports. Decide whether visoto should show both.
+- **WFS coverage:** only the first `WFS_MAX_LAYERS` layers of a service are
+  sampled; services such as `geo.ur.ch` list several hundred.
+- **Output size:** every observed value list and example is in the graph;
+  watch the size in visoto-qlever before running on all ~35,500
+  distributions.

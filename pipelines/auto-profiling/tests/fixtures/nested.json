@@ -1,0 +1,7 @@
+{"version": 8, "name": "basemap",
+ "sources": {"base": {"type": "vector", "url": "https://x.org/tiles.json"}},
+ "layers": [
+  {"id": "water", "type": "fill", "paint": {"fill-color": "#a0c8f0"}, "minzoom": 0},
+  {"id": "roads", "type": "line", "paint": {"line-color": "#fff", "line-width": 2}},
+  {"id": "labels", "type": "symbol", "layout": {"text-field": "{name}"}, "minzoom": 10}
+ ]}

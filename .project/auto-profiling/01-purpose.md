@@ -4,7 +4,7 @@ Auto-detect the data structure of opendata.swiss distributions and publish it
 as SHACL, so visoto can show field names, types, code lists and value
 distributions next to each dataset.
 
-Status: **planned** (2026-11-03).
+Status: **implemented** (2026-11-03); see [03-plan.md](03-plan.md).
 
 ## Input
 
@@ -28,6 +28,31 @@ works as well, but is not required.
 
 Adapting visoto's templates to show the structures is **out of scope**; it is
 done in a separate session once the triples are loaded.
+
+### Import into visoto
+
+1. `scripts/run.sh auto-profiling` (or `--skip-fetch` to re-profile from the
+   saved samples); the run validates `out/auto-profiling.ttl` and writes
+   `out/report.md`.
+2. Open <https://visoto.hutzli.org/?endpoint=visoto-qlever>, open the upload
+   modal, choose the file `pipelines/auto-profiling/out/auto-profiling.ttl`
+   and the named graph `urn:data:auto-profiling-githubpipeline`.
+3. Replace the graph on load rather than adding to it: IRIs are stable across
+   runs, but observed statistics and the run IRI change, so adding would keep
+   stale profiles. (Whether the modal replaces or appends is the same open
+   question as for the i14y pipeline.)
+4. Check the load, e.g. with the visoto MCP `run_sparql_query` on
+   `visoto-qlever`:
+
+   ```sparql
+   SELECT ?class (COUNT(?s) AS ?n) WHERE {
+     GRAPH <urn:data:auto-profiling-githubpipeline> { ?s a ?class }
+     VALUES ?class { <https://example.org/auto-profiling/prof#Structure>
+                     <http://www.w3.org/ns/shacl#PropertyShape> <https://cube.link/Constraint> }
+   } GROUP BY ?class
+   ```
+
+   and compare with the `classes` counts in `out/auto-profiling.meta.json`.
 
 ## Scope
 

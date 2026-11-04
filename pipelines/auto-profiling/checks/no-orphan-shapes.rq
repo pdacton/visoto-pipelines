@@ -1,0 +1,16 @@
+# Every node shape is a part of a structure or nested under a property (sh:node),
+# and every property shape belongs to a node shape.
+PREFIX sh:  <http://www.w3.org/ns/shacl#>
+PREFIX dct: <http://purl.org/dc/terms/>
+SELECT ?problem WHERE {
+  {
+    ?shape a sh:NodeShape .
+    FILTER NOT EXISTS { ?structure dct:hasPart ?shape }
+    FILTER NOT EXISTS { ?property sh:node ?shape }
+    BIND(CONCAT("orphan node shape ", STR(?shape)) AS ?problem)
+  } UNION {
+    ?shape a sh:PropertyShape .
+    FILTER NOT EXISTS { ?node sh:property ?shape }
+    BIND(CONCAT("orphan property shape ", STR(?shape)) AS ?problem)
+  }
+}

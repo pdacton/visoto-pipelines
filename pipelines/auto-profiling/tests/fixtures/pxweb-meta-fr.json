@@ -1,0 +1,3 @@
+{"title":"Population selon l'année et le canton","variables":[
+ {"code":"Jahr","text":"Année","values":["2022","2023"],"valueTexts":["2022","2023"],"time":true},
+ {"code":"Kanton","text":"Canton","values":["0","1"],"valueTexts":["Suisse","Zurich"],"elimination":true}]}

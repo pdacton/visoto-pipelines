@@ -7,6 +7,7 @@ TOOLS="$ROOT/.tools"
 SPARQL_ANYTHING_VERSION=1.2.0
 JENA_VERSION=6.2.0
 JQ_VERSION=1.8.1
+UV_VERSION=0.13.7
 
 SA_JAR="$TOOLS/sparql-anything-v$SPARQL_ANYTHING_VERSION.jar"
 JENA_HOME="$TOOLS/apache-jena-$JENA_VERSION"
@@ -41,6 +42,20 @@ ensure_tools() {
     fi
     export PATH="$TOOLS/bin:$PATH"
   fi
+}
+
+# uv for Python pipelines (pipelines/<name>/pyproject.toml): from the PATH, else a pinned
+# copy downloaded into .tools/bin.
+ensure_uv() {
+  command -v uv >/dev/null && return
+  if [ -x "$HOME/.local/bin/uv" ]; then export PATH="$HOME/.local/bin:$PATH"; return; fi
+  if [ ! -x "$TOOLS/bin/uv" ]; then
+    log "downloading uv $UV_VERSION"
+    mkdir -p "$TOOLS/bin"
+    curl -fsSL "https://github.com/astral-sh/uv/releases/download/$UV_VERSION/uv-$(uname -m)-unknown-linux-gnu.tar.gz" |
+      tar xz -C "$TOOLS/bin" --strip-components=1
+  fi
+  export PATH="$TOOLS/bin:$PATH"
 }
 
 # Run a SPARQL Anything query file: sa <query> <output> [format]

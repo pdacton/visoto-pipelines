@@ -13,4 +13,4 @@ Auto-detected structures (SHACL + profiles) for opendata.swiss distributions.
 | [open-questions.md](open-questions.md) | Not yet decided |
 | [prototype/](prototype/) | 2026-11-03 prototypes: tabular inference and Table Schema → SHACL/cube mapper, with sample input and output |
 
-Started 2026-11-03.
+Started and implemented 2026-11-03. Code: [pipelines/auto-profiling/](../../pipelines/auto-profiling/).

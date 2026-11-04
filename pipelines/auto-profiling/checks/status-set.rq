@@ -1,0 +1,11 @@
+# Every resolved distribution has a structure with a status (profiled, skipped or failed).
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
+PREFIX dct:  <http://purl.org/dc/terms/>
+SELECT ?problem WHERE {
+  ?distribution a dcat:Distribution .
+  FILTER NOT EXISTS {
+    ?distribution dct:conformsTo ?structure .
+    ?structure ?status ?value FILTER(STRENDS(STR(?status), "prof#status"))
+  }
+  BIND(CONCAT("no structure or status: ", STR(?distribution)) AS ?problem)
+}

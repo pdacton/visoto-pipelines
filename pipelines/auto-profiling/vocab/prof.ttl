@@ -1,0 +1,100 @@
+# Profile vocabulary of the auto-profiling pipeline.
+# Written for the default BASE_IRI; emit.py moves it to {BASE_IRI}prof# when BASE_IRI differs.
+@prefix prof: <https://example.org/auto-profiling/prof#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+
+<https://example.org/auto-profiling/prof#> a owl:Ontology ;
+    rdfs:label "auto-profiling profile vocabulary"@en ;
+    rdfs:comment "Structures detected from opendata.swiss distributions, and what was observed in their samples. Constraints are SHACL; observations hang off property shapes via prof:observed."@en .
+
+# --- classes and statuses ---------------------------------------------------------
+
+prof:Structure a rdfs:Class ;
+    rdfs:label "Structure"@en ;
+    rdfs:comment "The detected structure of one or more equivalent distributions; its parts (dct:hasPart) are sh:NodeShapes, one per table, sheet, layer or class."@en .
+
+prof:Status a rdfs:Class ;
+    rdfs:label "Profiling status"@en .
+prof:profiled a prof:Status ; rdfs:label "profiled"@en ;
+    rdfs:comment "A structure was detected."@en .
+prof:skipped a prof:Status ; rdfs:label "skipped"@en ;
+    rdfs:comment "Not profiled by design: out of scope, too large or unreachable without errors."@en .
+prof:failed a prof:Status ; rdfs:label "failed"@en ;
+    rdfs:comment "Profiling was attempted and failed; prof:statusReason says why."@en .
+
+prof:Observation a rdfs:Class ;
+    rdfs:label "Observed profile"@en ;
+    rdfs:comment "Statistics of one field in the sample of one run. Changes with every run; never a constraint."@en .
+
+# --- structure ---------------------------------------------------------------------
+
+prof:status a rdf:Property ; rdfs:label "status"@en ; rdfs:domain prof:Structure ; rdfs:range prof:Status .
+prof:statusReason a rdf:Property ; rdfs:label "status reason"@en ; rdfs:domain prof:Structure ;
+    rdfs:comment "Why a structure was skipped or failed, e.g. out-of-scope:WMS, too-large, html-page, http-404."@en .
+prof:declaredFormat a rdf:Property ; rdfs:label "declared format"@en ; rdfs:domain prof:Structure ;
+    rdfs:comment "A format the DCAT metadata suggests (dct:format, dcat:mediaType or URL); several when they conflict."@en .
+prof:formatMatch a rdf:Property ; rdfs:label "format match"@en ; rdfs:range xsd:boolean ;
+    rdfs:comment "Whether the sniffed format (dct:format) agrees with a declared one."@en .
+prof:engine a rdf:Property ; rdfs:label "engine"@en ;
+    rdfs:comment "The profiling engine: tabular, geo, px, tree or rdf."@en .
+prof:profiledDistribution a rdf:Property ; rdfs:label "profiled distribution"@en ;
+    rdfs:comment "The representative distribution whose sample was profiled."@en .
+prof:sourceURL a rdf:Property ; rdfs:label "source URL"@en ; rdfs:range xsd:anyURI .
+
+# --- parts -------------------------------------------------------------------------
+
+prof:rowCount a rdf:Property ; rdfs:label "row count"@en ; rdfs:range xsd:integer ;
+    rdfs:comment "Rows, features or cells: the total where the format states it (Parquet, GPKG, PX), otherwise the sample's."@en .
+prof:geometryType a rdf:Property ; rdfs:label "geometry type"@en ;
+    rdfs:comment "OGC geometry type of a layer, e.g. MultiPolygon."@en .
+prof:crs a rdf:Property ; rdfs:label "coordinate reference system"@en ;
+    rdfs:comment "EPSG IRI of a layer's CRS."@en .
+prof:dateFormat a rdf:Property ; rdfs:label "date format"@en ;
+    rdfs:comment "strftime-style date format detected in a CSV dialect."@en .
+prof:recordsPath a rdf:Property ; rdfs:label "records path"@en ;
+    rdfs:comment "JSON Pointer of the array that holds the records."@en .
+
+# --- fields ------------------------------------------------------------------------
+
+prof:sourceName a rdf:Property ; rdfs:label "source name"@en ;
+    rdfs:comment "The field's code in the source when sh:name shows its label (PX)."@en .
+prof:format a rdf:Property ; rdfs:label "format"@en ;
+    rdfs:comment "Table Schema format of a field, e.g. a date pattern or a time unit."@en .
+prof:categorical a rdf:Property ; rdfs:label "categorical"@en ; rdfs:range xsd:boolean ;
+    rdfs:comment "Few distinct values relative to rows: a code list candidate (its values are the sh:in)."@en .
+prof:booleanCandidate a rdf:Property ; rdfs:label "boolean candidate"@en ; rdfs:range xsd:boolean ;
+    rdfs:comment "Two distinct values that read as yes/no."@en .
+prof:codeLabel a rdf:Property ; rdfs:label "code label"@en ;
+    rdfs:comment "A code (skos:notation) of the field with its labels per language (skos:prefLabel)."@en .
+prof:unitLabel a rdf:Property ; rdfs:label "unit label"@en ;
+    rdfs:comment "The unit as published, kept when it doesn't map to a QUDT unit."@en .
+
+# --- observations ------------------------------------------------------------------
+
+prof:observed a rdf:Property ; rdfs:label "observed"@en ; rdfs:range prof:Observation .
+prof:count a rdf:Property ; rdfs:label "count"@en ; rdfs:comment "Rows or instances in the sample."@en .
+prof:nullPercentage a rdf:Property ; rdfs:label "null percentage"@en .
+prof:distinct a rdf:Property ; rdfs:label "distinct values"@en ; rdfs:comment "Exact up to 50, approximate above."@en .
+prof:min a rdf:Property ; rdfs:label "minimum"@en .
+prof:max a rdf:Property ; rdfs:label "maximum"@en .
+prof:mean a rdf:Property ; rdfs:label "mean"@en .
+prof:std a rdf:Property ; rdfs:label "standard deviation"@en .
+prof:q25 a rdf:Property ; rdfs:label "first quartile"@en .
+prof:q50 a rdf:Property ; rdfs:label "median"@en .
+prof:q75 a rdf:Property ; rdfs:label "third quartile"@en .
+prof:example a rdf:Property ; rdfs:label "example"@en ; rdfs:comment "At most 3 per field, truncated to 200 characters."@en .
+prof:support a rdf:Property ; rdfs:label "support"@en ;
+    rdfs:comment "Share of instances (RDF) that use the property."@en .
+prof:maxItems a rdf:Property ; rdfs:label "maximum items"@en ;
+    rdfs:comment "Most values of a repeated JSON/XML field within one parent."@en .
+prof:maxPerInstance a rdf:Property ; rdfs:label "maximum per instance"@en ;
+    rdfs:comment "Most values of an RDF property on one instance."@en .
+
+# --- runs --------------------------------------------------------------------------
+
+prof:sampleRows a rdf:Property ; rdfs:label "sample rows"@en ; rdfs:comment "SAMPLE_ROWS of the run."@en .
+prof:toolVersion a rdf:Property ; rdfs:label "tool version"@en .

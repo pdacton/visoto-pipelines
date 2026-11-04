@@ -1,0 +1,249 @@
+@prefix csvw: <http://www.w3.org/ns/csvw#> .
+@prefix cube: <https://cube.link/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix meta: <https://cube.link/meta/> .
+@prefix prof: <https://example.org/auto-profiling/prof#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix schema: <http://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix time: <http://www.w3.org/2006/time#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://opendata.swiss/set/data/bevoelkerung-test> dcat:distribution <https://opendata.swiss/set/distribution/bevoelkerung-test> .
+
+<https://example.org/auto-profiling/structure/bevoelkerung> a prof:Structure ;
+    dct:format <http://publications.europa.eu/resource/authority/file-type/CSV> ;
+    dct:hasPart <https://example.org/auto-profiling/structure/bevoelkerung/main> ;
+    dct:identifier "bevoelkerung" ;
+    prov:wasGeneratedBy <https://example.org/auto-profiling/run/test> ;
+    prof:declaredFormat <http://publications.europa.eu/resource/authority/file-type/CSV> ;
+    prof:engine "tabular" ;
+    prof:formatMatch true ;
+    prof:profiledDistribution <https://opendata.swiss/set/distribution/bevoelkerung-test> ;
+    prof:sourceURL "https://example.org/bevoelkerung.csv"^^xsd:anyURI ;
+    prof:status prof:profiled .
+
+<https://example.org/auto-profiling/structure/bevoelkerung/main> a sh:NodeShape,
+        cube:Constraint ;
+    csvw:dialect [ csvw:delimiter ";" ;
+            csvw:encoding "utf-8" ;
+            csvw:header true ;
+            prof:dateFormat "%d.%m.%Y" ] ;
+    sh:closed true ;
+    sh:property [ sh:nodeKind sh:IRI ;
+            sh:path cube:observedBy ],
+        [ sh:in ( cube:Observation ) ;
+            sh:nodeKind sh:IRI ;
+            sh:path rdf:type ],
+        <https://example.org/auto-profiling/structure/bevoelkerung/main/anteil_auslaender>,
+        <https://example.org/auto-profiling/structure/bevoelkerung/main/bfs_nr>,
+        <https://example.org/auto-profiling/structure/bevoelkerung/main/einwohner>,
+        <https://example.org/auto-profiling/structure/bevoelkerung/main/flaeche_km2>,
+        <https://example.org/auto-profiling/structure/bevoelkerung/main/gemeinde>,
+        <https://example.org/auto-profiling/structure/bevoelkerung/main/hauptort>,
+        <https://example.org/auto-profiling/structure/bevoelkerung/main/kanton>,
+        <https://example.org/auto-profiling/structure/bevoelkerung/main/stichtag> ;
+    prof:rowCount 60 .
+
+<https://example.org/auto-profiling/structure/bevoelkerung/main/anteil_auslaender> a sh:PropertyShape,
+        cube:MeasureDimension ;
+    qudt:scaleType qudt:RatioScale ;
+    schema:name "Anteil_Auslaender_%" ;
+    sh:datatype xsd:decimal ;
+    sh:maxCount 1 ;
+    sh:minCount 0 ;
+    sh:name "Anteil_Auslaender_%" ;
+    sh:order 5 ;
+    sh:path <https://example.org/auto-profiling/structure/bevoelkerung/main/col/anteil_auslaender> ;
+    prof:observed [ prov:wasGeneratedBy <https://example.org/auto-profiling/run/test> ;
+            prof:count 60 ;
+            prof:distinct 50 ;
+            prof:example "15.9",
+                "29.8",
+                "41.5" ;
+            prof:max 46.9 ;
+            prof:mean 30.4386 ;
+            prof:min 15.1 ;
+            prof:nullPercentage 5.0 ;
+            prof:q25 22.425 ;
+            prof:q50 31.7 ;
+            prof:q75 36.925 ;
+            prof:std 9.6 ] .
+
+<https://example.org/auto-profiling/structure/bevoelkerung/main/bfs_nr> a sh:PropertyShape,
+        cube:KeyDimension ;
+    qudt:scaleType qudt:NominalScale ;
+    schema:name "BFS_Nr" ;
+    sh:datatype xsd:integer ;
+    sh:in ( 261 351 371 2196 5586 6621 ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "BFS_Nr" ;
+    sh:order 0 ;
+    sh:path <https://example.org/auto-profiling/structure/bevoelkerung/main/col/bfs_nr> ;
+    prof:categorical true ;
+    prof:observed [ prov:wasGeneratedBy <https://example.org/auto-profiling/run/test> ;
+            prof:count 60 ;
+            prof:distinct 6 ;
+            prof:example "2196",
+                "351",
+                "371" ;
+            prof:max 6621 ;
+            prof:mean 2564.3333 ;
+            prof:min 261 ;
+            prof:nullPercentage 0.0 ;
+            prof:q25 351 ;
+            prof:q50 1284 ;
+            prof:q75 5586 ;
+            prof:std 2627.6749 ] .
+
+<https://example.org/auto-profiling/structure/bevoelkerung/main/einwohner> a sh:PropertyShape,
+        cube:MeasureDimension ;
+    qudt:scaleType qudt:RatioScale ;
+    schema:name "Einwohner" ;
+    sh:datatype xsd:integer ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Einwohner" ;
+    sh:order 4 ;
+    sh:path <https://example.org/auto-profiling/structure/bevoelkerung/main/col/einwohner> ;
+    prof:observed [ prov:wasGeneratedBy <https://example.org/auto-profiling/run/test> ;
+            prof:count 60 ;
+            prof:distinct 60 ;
+            prof:example "130076",
+                "81823",
+                "90445" ;
+            prof:max 428953 ;
+            prof:mean 250377.1833 ;
+            prof:min 24446 ;
+            prof:nullPercentage 0.0 ;
+            prof:q25 165781 ;
+            prof:q50 265194 ;
+            prof:q75 344956 ;
+            prof:std 112718.3968 ] .
+
+<https://example.org/auto-profiling/structure/bevoelkerung/main/flaeche_km2> a sh:PropertyShape,
+        cube:MeasureDimension ;
+    qudt:scaleType qudt:RatioScale ;
+    schema:name "Flaeche_km2" ;
+    sh:datatype xsd:decimal ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Flaeche_km2" ;
+    sh:order 6 ;
+    sh:path <https://example.org/auto-profiling/structure/bevoelkerung/main/col/flaeche_km2> ;
+    prof:observed [ prov:wasGeneratedBy <https://example.org/auto-profiling/run/test> ;
+            prof:count 60 ;
+            prof:distinct 62 ;
+            prof:example "24.42",
+                "65.61",
+                "78.5" ;
+            prof:max 88.14 ;
+            prof:mean 56.5637 ;
+            prof:min 21.78 ;
+            prof:nullPercentage 0.0 ;
+            prof:q25 38.485 ;
+            prof:q50 58.255 ;
+            prof:q75 72.535 ;
+            prof:std 19.7952 ] .
+
+<https://example.org/auto-profiling/structure/bevoelkerung/main/gemeinde> a sh:PropertyShape,
+        cube:KeyDimension ;
+    qudt:scaleType qudt:NominalScale ;
+    schema:name "Gemeinde" ;
+    sh:datatype xsd:string ;
+    sh:in ( "Bern"^^xsd:string "Biel/Bienne"^^xsd:string "Fribourg"^^xsd:string "Genève"^^xsd:string "Lausanne"^^xsd:string "Zürich"^^xsd:string ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Gemeinde" ;
+    sh:order 1 ;
+    sh:path <https://example.org/auto-profiling/structure/bevoelkerung/main/col/gemeinde> ;
+    prof:categorical true ;
+    prof:observed [ prov:wasGeneratedBy <https://example.org/auto-profiling/run/test> ;
+            prof:count 60 ;
+            prof:distinct 6 ;
+            prof:example "Bern",
+                "Biel/Bienne",
+                "Fribourg" ;
+            prof:max "Zürich" ;
+            prof:min "Bern" ;
+            prof:nullPercentage 0.0 ] .
+
+<https://example.org/auto-profiling/structure/bevoelkerung/main/hauptort> a sh:PropertyShape,
+        cube:KeyDimension ;
+    qudt:scaleType qudt:NominalScale ;
+    schema:name "Hauptort" ;
+    sh:datatype xsd:string ;
+    sh:in ( "ja"^^xsd:string "nein"^^xsd:string ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Hauptort" ;
+    sh:order 7 ;
+    sh:path <https://example.org/auto-profiling/structure/bevoelkerung/main/col/hauptort> ;
+    prof:booleanCandidate true ;
+    prof:categorical true ;
+    prof:observed [ prov:wasGeneratedBy <https://example.org/auto-profiling/run/test> ;
+            prof:count 60 ;
+            prof:distinct 2 ;
+            prof:example "ja",
+                "nein" ;
+            prof:max "nein" ;
+            prof:min "ja" ;
+            prof:nullPercentage 0.0 ] .
+
+<https://example.org/auto-profiling/structure/bevoelkerung/main/kanton> a sh:PropertyShape,
+        cube:KeyDimension ;
+    qudt:scaleType qudt:NominalScale ;
+    schema:name "Kanton" ;
+    sh:datatype xsd:string ;
+    sh:in ( "BE"^^xsd:string "FR"^^xsd:string "GE"^^xsd:string "VD"^^xsd:string "ZH"^^xsd:string ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Kanton" ;
+    sh:order 2 ;
+    sh:path <https://example.org/auto-profiling/structure/bevoelkerung/main/col/kanton> ;
+    prof:categorical true ;
+    prof:observed [ prov:wasGeneratedBy <https://example.org/auto-profiling/run/test> ;
+            prof:count 60 ;
+            prof:distinct 5 ;
+            prof:example "BE",
+                "FR",
+                "ZH" ;
+            prof:max "ZH" ;
+            prof:min "BE" ;
+            prof:nullPercentage 0.0 ] .
+
+<https://example.org/auto-profiling/structure/bevoelkerung/main/stichtag> a sh:PropertyShape,
+        cube:KeyDimension ;
+    qudt:scaleType qudt:IntervalScale ;
+    schema:name "Stichtag" ;
+    sh:datatype xsd:date ;
+    sh:in ( "2015-12-31"^^xsd:date "2016-12-31"^^xsd:date "2017-12-31"^^xsd:date "2018-12-31"^^xsd:date "2019-12-31"^^xsd:date "2020-12-31"^^xsd:date "2021-12-31"^^xsd:date "2022-12-31"^^xsd:date "2023-12-31"^^xsd:date "2024-12-31"^^xsd:date ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Stichtag" ;
+    sh:order 3 ;
+    sh:path <https://example.org/auto-profiling/structure/bevoelkerung/main/col/stichtag> ;
+    meta:dataKind [ a time:GeneralDateTimeDescription ;
+            time:unitType time:unitDay ] ;
+    prof:categorical true ;
+    prof:format "%d.%m.%Y" ;
+    prof:observed [ prov:wasGeneratedBy <https://example.org/auto-profiling/run/test> ;
+            prof:count 60 ;
+            prof:distinct 10 ;
+            prof:example "2015-12-31",
+                "2016-12-31",
+                "2017-12-31" ;
+            prof:max "2024-12-31"^^xsd:date ;
+            prof:min "2015-12-31"^^xsd:date ;
+            prof:nullPercentage 0.0 ;
+            prof:q25 "2017-12-31"^^xsd:date ;
+            prof:q50 "2020-07-01"^^xsd:date ;
+            prof:q75 "2022-12-31"^^xsd:date ] .
+
+<https://opendata.swiss/set/distribution/bevoelkerung-test> a dcat:Distribution ;
+    dct:conformsTo <https://example.org/auto-profiling/structure/bevoelkerung> .
+

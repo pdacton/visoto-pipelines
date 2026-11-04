@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # fetch → transform → validate for one pipeline; result in pipelines/<name>/out/.
+# The transform is pipelines/<name>/transform.sh if present, else the queries/*.sparql mappings.
 # Usage: run.sh <name> [--skip-fetch]
 . "$(dirname "$0")/lib.sh"
 
@@ -16,16 +17,21 @@ fi
 log "transform"
 rm -rf "$OUT"; mkdir -p "$OUT/parts"
 cd "$PIPELINE_DIR"   # queries use locations relative to the pipeline folder
-for q in queries/*.sparql; do
-  part="$OUT/parts/$(basename "$q" .sparql).nt"
-  sa "$q" "$part"
-  log "  $(basename "$q"): $(wc -l < "$part") triples"
-done
+if [ -x transform.sh ]; then
+  # A pipeline with its own transform (e.g. Python) writes out/parts/*.nt itself.
+  ./transform.sh
+else
+  for q in queries/*.sparql; do
+    part="$OUT/parts/$(basename "$q" .sparql).nt"
+    sa "$q" "$part"
+    log "  $(basename "$q"): $(wc -l < "$part") triples"
+  done
+fi
 
 log "merge"
 # Mapped parts plus the raw files the pipeline copies unchanged (COPY in
 # pipeline.env). riot scopes blank node labels per input file, so they can't collide.
-riot --formatted=TTL "$OUT"/parts/*.nt $COPY > "$OUT/$NAME.ttl"
+riot --formatted=TTL "$OUT"/parts/*.nt ${COPY:-} > "$OUT/$NAME.ttl"
 
 "$ROOT/scripts/validate.sh" "$name"
 "$ROOT/scripts/meta.sh" "$name"
