@@ -1,7 +1,7 @@
 @prefix csvw: <http://www.w3.org/ns/csvw#> .
 @prefix cube: <https://cube.link/> .
 @prefix meta: <https://cube.link/meta/> .
-@prefix prof: <https://example.org/prof#> .
+@prefix aprof: <https://example.org/prof#> .
 @prefix qudt: <http://qudt.org/schema/qudt/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix schema: <http://schema.org/> .
@@ -38,13 +38,13 @@
     sh:name "Anteil_Auslaender_%" ;
     sh:order 5 ;
     sh:path <https://example.org/structure/bevoelkerung/col/anteil_auslaender> ;
-    prof:observed [ prof:approxUnique 50 ;
-            prof:count 60 ;
-            prof:max "46.9" ;
-            prof:mean "30.43859649122806" ;
-            prof:min "15.1" ;
-            prof:nullPercentage 5e+00 ;
-            prof:q50 "31.7" ] .
+    aprof:observed [ aprof:approxUnique 50 ;
+            aprof:count 60 ;
+            aprof:max "46.9" ;
+            aprof:mean "30.43859649122806" ;
+            aprof:min "15.1" ;
+            aprof:nullPercentage 5e+00 ;
+            aprof:q50 "31.7" ] .
 
 <https://example.org/structure/bevoelkerung/bfs_nr> a sh:PropertyShape,
         cube:KeyDimension ;
@@ -57,13 +57,13 @@
     sh:name "BFS_Nr" ;
     sh:order 0 ;
     sh:path <https://example.org/structure/bevoelkerung/col/bfs_nr> ;
-    prof:observed [ prof:approxUnique 6 ;
-            prof:count 60 ;
-            prof:max "6621" ;
-            prof:mean "2564.3333333333335" ;
-            prof:min "261" ;
-            prof:nullPercentage 0e+00 ;
-            prof:q50 "1284" ] .
+    aprof:observed [ aprof:approxUnique 6 ;
+            aprof:count 60 ;
+            aprof:max "6621" ;
+            aprof:mean "2564.3333333333335" ;
+            aprof:min "261" ;
+            aprof:nullPercentage 0e+00 ;
+            aprof:q50 "1284" ] .
 
 <https://example.org/structure/bevoelkerung/einwohner> a sh:PropertyShape,
         cube:MeasureDimension ;
@@ -75,13 +75,13 @@
     sh:name "Einwohner" ;
     sh:order 4 ;
     sh:path <https://example.org/structure/bevoelkerung/col/einwohner> ;
-    prof:observed [ prof:approxUnique 60 ;
-            prof:count 60 ;
-            prof:max "428953" ;
-            prof:mean "250377.18333333332" ;
-            prof:min "24446" ;
-            prof:nullPercentage 0e+00 ;
-            prof:q50 "265194" ] .
+    aprof:observed [ aprof:approxUnique 60 ;
+            aprof:count 60 ;
+            aprof:max "428953" ;
+            aprof:mean "250377.18333333332" ;
+            aprof:min "24446" ;
+            aprof:nullPercentage 0e+00 ;
+            aprof:q50 "265194" ] .
 
 <https://example.org/structure/bevoelkerung/flaeche_km2> a sh:PropertyShape,
         cube:MeasureDimension ;
@@ -93,13 +93,13 @@
     sh:name "Flaeche_km2" ;
     sh:order 6 ;
     sh:path <https://example.org/structure/bevoelkerung/col/flaeche_km2> ;
-    prof:observed [ prof:approxUnique 62 ;
-            prof:count 60 ;
-            prof:max "88.14" ;
-            prof:mean "56.563666666666656" ;
-            prof:min "21.78" ;
-            prof:nullPercentage 0e+00 ;
-            prof:q50 "58.255" ] .
+    aprof:observed [ aprof:approxUnique 62 ;
+            aprof:count 60 ;
+            aprof:max "88.14" ;
+            aprof:mean "56.563666666666656" ;
+            aprof:min "21.78" ;
+            aprof:nullPercentage 0e+00 ;
+            aprof:q50 "58.255" ] .
 
 <https://example.org/structure/bevoelkerung/gemeinde> a sh:PropertyShape,
         cube:KeyDimension ;
@@ -112,11 +112,11 @@
     sh:name "Gemeinde" ;
     sh:order 1 ;
     sh:path <https://example.org/structure/bevoelkerung/col/gemeinde> ;
-    prof:observed [ prof:approxUnique 6 ;
-            prof:count 60 ;
-            prof:max "Zürich" ;
-            prof:min "Bern" ;
-            prof:nullPercentage 0e+00 ] .
+    aprof:observed [ aprof:approxUnique 6 ;
+            aprof:count 60 ;
+            aprof:max "Zürich" ;
+            aprof:min "Bern" ;
+            aprof:nullPercentage 0e+00 ] .
 
 <https://example.org/structure/bevoelkerung/hauptort> a sh:PropertyShape,
         cube:KeyDimension ;
@@ -129,11 +129,11 @@
     sh:name "Hauptort" ;
     sh:order 7 ;
     sh:path <https://example.org/structure/bevoelkerung/col/hauptort> ;
-    prof:observed [ prof:approxUnique 2 ;
-            prof:count 60 ;
-            prof:max "nein" ;
-            prof:min "ja" ;
-            prof:nullPercentage 0e+00 ] .
+    aprof:observed [ aprof:approxUnique 2 ;
+            aprof:count 60 ;
+            aprof:max "nein" ;
+            aprof:min "ja" ;
+            aprof:nullPercentage 0e+00 ] .
 
 <https://example.org/structure/bevoelkerung/kanton> a sh:PropertyShape,
         cube:KeyDimension ;
@@ -146,11 +146,11 @@
     sh:name "Kanton" ;
     sh:order 2 ;
     sh:path <https://example.org/structure/bevoelkerung/col/kanton> ;
-    prof:observed [ prof:approxUnique 5 ;
-            prof:count 60 ;
-            prof:max "ZH" ;
-            prof:min "BE" ;
-            prof:nullPercentage 0e+00 ] .
+    aprof:observed [ aprof:approxUnique 5 ;
+            aprof:count 60 ;
+            aprof:max "ZH" ;
+            aprof:min "BE" ;
+            aprof:nullPercentage 0e+00 ] .
 
 <https://example.org/structure/bevoelkerung/stichtag> a sh:PropertyShape,
         cube:KeyDimension ;
@@ -165,12 +165,12 @@
     sh:path <https://example.org/structure/bevoelkerung/col/stichtag> ;
     meta:dataKind [ a time:GeneralDateTimeDescription ;
             time:unitType time:unitDay ] ;
-    prof:observed [ prof:approxUnique 10 ;
-            prof:count 60 ;
-            prof:max "2024-12-31" ;
-            prof:mean "2020-07-01 00:00:00" ;
-            prof:min "2015-12-31" ;
-            prof:nullPercentage 0e+00 ;
-            prof:q50 "2020-07-01" ] .
+    aprof:observed [ aprof:approxUnique 10 ;
+            aprof:count 60 ;
+            aprof:max "2024-12-31" ;
+            aprof:mean "2020-07-01 00:00:00" ;
+            aprof:min "2015-12-31" ;
+            aprof:nullPercentage 0e+00 ;
+            aprof:q50 "2020-07-01" ] .
 
 

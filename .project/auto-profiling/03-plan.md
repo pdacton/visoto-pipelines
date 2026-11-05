@@ -122,10 +122,10 @@ real engine exists.
   - Mint IRIs from `BASE_IRI`.
   - Link `dct:conformsTo` from every distribution in the group.
   - Write the Table Schema → SHACL mapping, the optional `cube:Constraint`
-    (with the confidence rule), `prof:observed`, provenance, and the status
+    (with the confidence rule), `aprof:observed`, provenance, and the status
     stubs for skipped and failed distributions.
 - [x] Copy `vocab/prof.ttl` into the parts.
-- [x] `shapes.ttl`: every `prof:Structure` has at least one `dct:hasPart`;
+- [x] `shapes.ttl`: every `aprof:Structure` has at least one `dct:hasPart`;
   every `sh:PropertyShape` has `sh:name`, `sh:path` and `sh:order`; every
   structure has `prov:wasGeneratedBy`.
 - [x] `checks/`:
@@ -167,7 +167,7 @@ minutes for the test list.
 - [x] `ST_Read` via DuckDB `spatial`:
   - SHP inside ZIP (`/vsizip/`), GPKG and GML.
   - WFS from `DescribeFeatureType` plus the `GetFeature` sample.
-- [x] One part per layer, with `prof:geometryType`, `prof:crs`, a geometry
+- [x] One part per layer, with `aprof:geometryType`, `aprof:crs`, a geometry
   field (`geo:wktLiteral`), and attribute fields as in tabular, including
   stats.
 - [x] Fall back to `ogrinfo -json -so` (pyogrio) if `ST_Read` fails on a
@@ -207,7 +207,7 @@ depth limit of 6 and a property limit of 200 per node.
 
 - [x] Parse the sample with rdflib, with a triple cap
   (`SAMPLE_ROWS × 10`). Run sheXer to get SHACL, and keep the constraint
-  support ratios as `prof:observed`.
+  support ratios as `aprof:observed`.
 - [x] Profile one serialisation per group (prefer Turtle).
 
 Done when the RDF test datasets produce shapes per class.
@@ -223,7 +223,7 @@ Done when the RDF test datasets produce shapes per class.
 - [x] Document the import in `01-purpose.md`: upload `out/auto-profiling.ttl`
   to `visoto-qlever`, graph `urn:data:auto-profiling-githubpipeline`, using
   replace on load, which is an open question for the i14y pipeline as well.
-- [ ] Verify the import with the visoto MCP: count `prof:Structure`,
+- [ ] Verify the import with the visoto MCP: count `aprof:Structure`,
   `sh:PropertyShape` and `cube:Constraint`, and spot-check 3 datasets.
 
 Done when the larger run finishes unattended, with failures explained in the
@@ -265,19 +265,19 @@ Where the implementation differs from, or adds to, the plan above:
   `srsName`; INTERLIS bookkeeping tables (`T_ILI2DB_*`) are skipped.
 - **RDF:** sheXer writes `sh:dataType`; it is read back as `sh:datatype`.
   Support ratios and value statistics are computed per class and predicate
-  with rdflib (`prof:support`), and properties below sheXer's threshold are
+  with rdflib (`aprof:support`), and properties below sheXer's threshold are
   kept as optional.
-- **Statuses** are IRIs (`prof:profiled`, `prof:skipped`, `prof:failed`); a
+- **Statuses** are IRIs (`aprof:profiled`, `aprof:skipped`, `aprof:failed`); a
   skipped or failed structure carries a reason and no parts, and every
   distribution of its group points to it. Distributions are typed
   `dcat:Distribution` and linked from their dataset, so the output is usable
   without the ODS catalogue.
-- **Statistics as literals:** `prof:mean`, `prof:std`, `prof:nullPercentage`
-  and `prof:support` are `xsd:decimal` rounded to 4 places; min, max and
+- **Statistics as literals:** `aprof:mean`, `aprof:std`, `aprof:nullPercentage`
+  and `aprof:support` are `xsd:decimal` rounded to 4 places; min, max and
   quartiles take the field's datatype where valid.
-- **Extra vocabulary:** `prof:codeLabel` (SKOS notation and labels per
-  language, PX), `prof:unitLabel`, `prof:sourceName`, `prof:format`,
-  `prof:dateFormat`, `prof:recordsPath`, `prof:support`, `prof:maxItems`,
-  `prof:categorical`, `prof:booleanCandidate`; see `vocab/prof.ttl`.
+- **Extra vocabulary:** `aprof:codeLabel` (SKOS notation and labels per
+  language, PX), `aprof:unitLabel`, `aprof:sourceName`, `aprof:format`,
+  `aprof:dateFormat`, `aprof:recordsPath`, `aprof:support`, `aprof:maxItems`,
+  `aprof:categorical`, `aprof:booleanCandidate`; see `vocab/prof.ttl`.
 - **Test list:** 14 datasets in `datasets.txt`; `datasets-large.txt` holds the
   500-dataset sample for phase 9.

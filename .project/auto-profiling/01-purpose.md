@@ -95,7 +95,7 @@ Stages, each rerunnable from the files of the previous one:
 resolve  datasets.txt → raw/distributions.json         (SPARQL)
 fetch    → raw/samples/*, raw/sniff.json                (HTTP, sniffing)
 profile  → out/profiles/*.json                          (format engines)
-emit     → out/parts/*.nt → out/auto-profiling.ttl      (SHACL + prof:)
+emit     → out/parts/*.nt → out/auto-profiling.ttl      (SHACL + aprof:)
 validate → shapes.ttl, checks/*.rq                      (existing validate.sh)
 ```
 

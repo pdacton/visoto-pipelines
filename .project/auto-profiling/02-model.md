@@ -9,7 +9,7 @@ Two layers, kept apart:
   reusable, and is the part visoto renders as "the schema".
 - **Profile:** what was observed in the sample (counts, nulls, min/max,
   examples). It changes with every run and hangs off the structure via
-  `prof:observed`, never inside the constraints.
+  `aprof:observed`, never inside the constraints.
 
 ## Alignment with I14Y
 
@@ -18,7 +18,7 @@ I14Y structures (copied by the `i14y` pipeline) use
 The same pattern is used here, so visoto templates can treat both alike:
 
 ```
-dcat:Distribution ──dct:conformsTo──▶ prof:Structure ──dct:hasPart──▶ sh:NodeShape (one per sheet or layer)
+dcat:Distribution ──dct:conformsTo──▶ aprof:Structure ──dct:hasPart──▶ sh:NodeShape (one per sheet or layer)
                                                                           └─sh:property─▶ sh:PropertyShape
 ```
 
@@ -50,14 +50,14 @@ Profiles are blank nodes, since they are per-run values.
 
 | Concept | Term | Notes |
 |---|---|---|
-| Structure | `prof:Structure`, `dct:hasPart`, `dct:format` (sniffed, EU file-type IRI), `prof:declaredFormat`, `prof:formatMatch` | |
-| Part | `sh:NodeShape`, `rdfs:label` (sheet or layer name), `prof:rowCount` | `cube:Constraint` added when applicable (below) |
+| Structure | `aprof:Structure`, `dct:hasPart`, `dct:format` (sniffed, EU file-type IRI), `aprof:declaredFormat`, `aprof:formatMatch` | |
+| Part | `sh:NodeShape`, `rdfs:label` (sheet or layer name), `aprof:rowCount` | `cube:Constraint` added when applicable (below) |
 | Field | `sh:PropertyShape`, `sh:name`, `schema:name`, `sh:order`, `sh:path`, `sh:datatype`, `sh:minCount`, `sh:maxCount`, `sh:in`, `sh:pattern`, `sh:node` (nested JSON or XML) | |
 | CSV dialect | `csvw:dialect [ csvw:delimiter ; csvw:header ; csvw:encoding ]` | tabular only |
-| Geometry | `prof:geometryType`, `prof:crs` (EPSG IRI), `sh:datatype geo:wktLiteral` | geo only |
-| Profile | `prof:observed [ prof:count, prof:nullPercentage, prof:distinct, prof:min, prof:max, prof:mean, prof:std, prof:q25, prof:q50, prof:q75, prof:example ]` | at most 3 examples, each truncated to 200 characters |
-| Provenance | `prov:wasGeneratedBy {run}`; the run carries `prov:endedAtTime`, tool versions, `prof:sampleRows` | |
-| Status | `prof:status` (`profiled`, `skipped`, `failed`) and `prof:statusReason` on the distribution's structure stub | so visoto can show why something has no structure |
+| Geometry | `aprof:geometryType`, `aprof:crs` (EPSG IRI), `sh:datatype geo:wktLiteral` | geo only |
+| Profile | `aprof:observed [ aprof:count, aprof:nullPercentage, aprof:distinct, aprof:min, aprof:max, aprof:mean, aprof:std, aprof:q25, aprof:q50, aprof:q75, aprof:example ]` | at most 3 examples, each truncated to 200 characters |
+| Provenance | `prov:wasGeneratedBy {run}`; the run carries `prov:endedAtTime`, tool versions, `aprof:sampleRows` | |
+| Status | `aprof:status` (`profiled`, `skipped`, `failed`) and `aprof:statusReason` on the distribution's structure stub | so visoto can show why something has no structure |
 
 ## Type mapping (Table Schema → SHACL)
 

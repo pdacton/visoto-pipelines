@@ -41,7 +41,7 @@ for i,(ic,t,s) in enumerate(chips):
     out.append(f'<text x="{px+pw/2:.1f}" y="{py+66}" font-size="11" fill="{TT2}" text-anchor="middle">{s}</text>')
 y+=ch; arrow()
 step("git-merge","Normalise","Profile JSON, a superset of Frictionless Table Schema"); arrow()
-step("shapes","Map to SHACL","sh:NodeShape + prof:observed, cube:Constraint where clear"); arrow()
+step("shapes","Map to SHACL","sh:NodeShape + aprof:observed, cube:Constraint where clear"); arrow()
 step("cloud-upload","Publish","out/auto-profiling.ttl, imported by hand into visoto-qlever")
 H=int(y+24)
 head=[f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" font-family="Segoe UI, Helvetica, Arial, sans-serif">',

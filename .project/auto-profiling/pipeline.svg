@@ -49,7 +49,7 @@
 <rect x="110.0" y="512" width="500" height="56" rx="12" fill="#F6F5F1" stroke="#B4B2A9" stroke-width="0.75"/>
 <g transform="translate(128.0,529.0) scale(0.9167)" fill="none" stroke="#5F5E5A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z" /> <rect x="3" y="14" width="7" height="7" rx="1" /> <circle cx="17.5" cy="17.5" r="3.5" /></g>
 <text x="166.0" y="536" font-size="14" font-weight="600" fill="#2C2C2A">Map to SHACL</text>
-<text x="166.0" y="554" font-size="12" fill="#5F5E5A">sh:NodeShape + prof:observed, cube:Constraint where clear</text>
+<text x="166.0" y="554" font-size="12" fill="#5F5E5A">sh:NodeShape + aprof:observed, cube:Constraint where clear</text>
 <line x1="360.0" y1="570" x2="360.0" y2="594" stroke="#888780" stroke-width="1" marker-end="url(#a)"/>
 <rect x="110.0" y="598" width="500" height="56" rx="12" fill="#F6F5F1" stroke="#B4B2A9" stroke-width="0.75"/>
 <g transform="translate(128.0,615.0) scale(0.9167)" fill="none" stroke="#5F5E5A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8" /> <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /> <path d="m8 17 4-4 4 4" /></g>

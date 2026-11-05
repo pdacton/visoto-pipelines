@@ -2,7 +2,7 @@
 
 Structure and profile stay apart: constraints describe the data (sh:datatype,
 sh:in, cardinality), observed statistics hang off each property shape via
-prof:observed and never become constraints. See .project/auto-profiling/02-model.md.
+aprof:observed and never become constraints. See .project/auto-profiling/02-model.md.
 """
 import json
 import logging
@@ -60,7 +60,7 @@ class Emitter:
     def graph(self) -> Graph:
         g = Graph()
         for p, ns in [("sh", SH), ("xsd", XSD), ("cube", CUBE), ("meta", META), ("schema", SDO), ("qudt", QUDT),
-                      ("csvw", CSVW), ("prof", self.prof), ("dct", DCTERMS), ("dcat", DCAT), ("prov", PROV),
+                      ("csvw", CSVW), ("aprof", self.prof), ("dct", DCTERMS), ("dcat", DCAT), ("prov", PROV),
                       ("skos", SKOS), ("time", TIME)]:
             g.bind(p, ns, override=True, replace=True)
         return g

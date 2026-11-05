@@ -76,7 +76,7 @@ for sample-sized input.
   table in about 8 formats; it is profiled once, and every distribution points
   to the same structure via `dct:conformsTo`.
 - **Structure and profile are kept apart.** SHACL constraints are stable;
-  observed statistics (`prof:observed`) change per run and never become
+  observed statistics (`aprof:observed`) change per run and never become
   constraints.
 - **Aligned with I14Y:** `dct:conformsTo` → structure → `dct:hasPart` →
   `sh:NodeShape`, the same pattern as the I14Y structures the `i14y`
@@ -86,7 +86,7 @@ for sample-sized input.
 - **The base IRI is configurable** (`BASE_IRI`); identifiers are hashes of the
   representative distribution IRI, so reruns are stable.
 - **Failures are data.** Skipped and failed distributions get a
-  `prof:status` and reason, so visoto can explain why something has no
+  `aprof:status` and reason, so visoto can explain why something has no
   structure.
 
 ## Prototype results

@@ -3,7 +3,7 @@
 - **`BASE_IRI` for production:** it defaults to `https://example.org/auto-profiling/`.
   Decide on `visoto.hutzli.org` or `ld.admin.ch` before structures are shared
   beyond visoto. Changing it later changes every IRI.
-- **`prof:` vocabulary:** whether a small custom vocabulary is acceptable
+- **`aprof:` vocabulary:** whether a small custom vocabulary is acceptable
   long-term, or whether the statistics should map to DQV or an existing
   profiling vocabulary.
 - **Equivalence groups:** treating Opendatasoft exports of one dataset as one
