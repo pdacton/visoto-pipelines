@@ -17,6 +17,8 @@ NUMERIC = {"integer", "number"}
 CATEGORICAL_MAX = 50       # at most this many distinct values for a code list
 EXAMPLES_MAX = 3
 EXAMPLE_CHARS = 200
+VALUE_SAMPLE = 200         # distinct values kept per field for concept matching (VALUE_SAMPLE in pipeline.env)
+SAMPLE_CHARS = 200
 
 
 def structure_id(distribution_iri: str) -> str:
@@ -56,6 +58,29 @@ def truncate_examples(values) -> list[str]:
     return out
 
 
+def sample_size(cfg) -> int:
+    """VALUE_SAMPLE from the config; the default where an engine runs without one (tests)."""
+    try:
+        return cfg.int("VALUE_SAMPLE")
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return VALUE_SAMPLE
+
+
+def value_sample(values, n: int = VALUE_SAMPLE) -> list[str]:
+    """Up to n distinct non-empty values as strings, truncated, chosen by their md5 hash.
+
+    Deterministic: the same values give the same sample on every run and in every engine, so the
+    slot fingerprint built from it is stable. Not part of the graph (out/slots.jsonl only)."""
+    seen = set()
+    for v in values:
+        if v is None or isinstance(v, (dict, list)):
+            continue
+        s = str(v).strip()
+        if s:
+            seen.add(s if len(s) <= SAMPLE_CHARS else s[:SAMPLE_CHARS - 1] + "…")
+    return sorted(seen, key=lambda s: hashlib.md5(s.encode()).hexdigest())[:n]
+
+
 @dataclass
 class Field:
     name: str
@@ -79,6 +104,7 @@ class Field:
     codeLabels: dict = field(default_factory=dict)   # code → {lang: label}
     stats: dict = field(default_factory=dict)        # count, nullPercentage, distinct, min, ...
     examples: list = field(default_factory=list)
+    sample: list = field(default_factory=list)       # value_sample(): input of concept matching
 
     def is_key(self, primary_key: list[str]) -> bool:
         """Key dimension: primary key, temporal, or categorical non-numeric-measure field."""
@@ -98,6 +124,7 @@ class Part:
     geometryType: str | None = None
     crs: str | None = None                           # EPSG code, e.g. "2056"
     targetClass: str | None = None                   # rdf engine
+    tableName: str | None = None                     # sheet or layer name in a multi-table source
     primaryKey: list = field(default_factory=list)
     keysUnique: bool | None = None                   # sample check, set by the engine
     cube: bool | None = None                         # True forces (PX), None → rule

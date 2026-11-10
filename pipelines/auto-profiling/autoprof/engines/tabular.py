@@ -15,7 +15,8 @@ from pathlib import Path
 import duckdb
 from frictionless import Detector, describe
 
-from ..model import (CATEGORICAL_MAX, Field, Part, TEMPORAL, truncate_examples, unique_slugs)
+from ..model import (CATEGORICAL_MAX, Field, Part, TEMPORAL, sample_size, truncate_examples, unique_slugs,
+                     value_sample)
 from . import EngineError, NotTabular
 
 MISSING = ["", "...", "..", "-", "NA", "N/A", "n/a", "null", "NULL", "x", "X", "*"]
@@ -85,8 +86,10 @@ def number(v):
 
 # --- statistics shared by the tabular and geo engines ---------------------------------
 
-def profile_relation(con, source: str, sample_rows: int, skip: set[str] = frozenset()) -> tuple[list[Field], int]:
-    """Fields with statistics for `SELECT * FROM <source> LIMIT sample_rows`."""
+def profile_relation(con, source: str, sample_rows: int, skip: set[str] = frozenset(),
+                     n_sample: int = 0) -> tuple[list[Field], int]:
+    """Fields with statistics for `SELECT * FROM <source> LIMIT sample_rows`, and up to n_sample distinct
+    values per field (chosen by md5, so the same on every run)."""
     con.execute(f"CREATE OR REPLACE TEMP TABLE sample AS SELECT * FROM {source} LIMIT {sample_rows}")
     rows = con.sql("SELECT COUNT(*) FROM sample").fetchall()[0][0]
     described = con.sql("DESCRIBE sample").fetchall()
@@ -137,6 +140,10 @@ def profile_relation(con, source: str, sample_rows: int, skip: set[str] = frozen
             ex = con.sql(f"SELECT DISTINCT {q(name)}::VARCHAR FROM (SELECT {q(name)} FROM sample "
                          f"WHERE {q(name)} IS NOT NULL LIMIT 200) LIMIT 3").fetchall()
             f.examples = truncate_examples(v[0] for v in ex)
+            if n_sample and ts not in ("object", "array", "any"):
+                f.sample = value_sample((v[0] for v in con.sql(
+                    f"SELECT v FROM (SELECT DISTINCT {q(name)}::VARCHAR AS v FROM sample WHERE {q(name)} IS NOT NULL) "
+                    f"ORDER BY md5(v) LIMIT {n_sample * 2}").fetchall()), n_sample)
         fields.append(f)
     return fields, rows
 
@@ -149,6 +156,7 @@ def integral_numbers(con, fields: list[Field]) -> None:
             if whole:
                 f.type = "integer"
                 f.examples = [e[:-2] if e.endswith(".0") else e for e in f.examples]
+                f.sample = value_sample([e[:-2] if e.endswith(".0") else e for e in f.sample], len(f.sample))
 
 
 def keys_unique(con, part: Part) -> bool | None:
@@ -376,10 +384,11 @@ def json_records(path: Path, tmp: Path) -> tuple[Path, str | None]:
 def profile(path: Path, kind: str, cfg, tmp: Path, detail: dict) -> list[Part]:
     """Parts for a tabular sample; kind is the sniffed token (CSV, XLSX, PARQUET, JSON, ...)."""
     rows = cfg.int("SAMPLE_ROWS")
+    n = sample_size(cfg)
     con = connect(tmp / "duckdb")
     try:
         if kind in ("CSV", "TSV", "TXT"):
-            return [csv_part(con, path, detail, rows, tmp, "main", None)]
+            return [csv_part(con, path, detail, rows, tmp, "main", None, n)]
         if kind in ("XLSX", "XLS", "ODS"):
             parts = []
             names = []
@@ -389,8 +398,9 @@ def profile(path: Path, kind: str, cfg, tmp: Path, detail: dict) -> list[Part]:
                 if found is None:
                     continue
                 names.append(name)
-                part = csv_part(con, out, {"delimiter": ",", "encoding": "utf-8"}, rows, tmp, name, name)
+                part = csv_part(con, out, {"delimiter": ",", "encoding": "utf-8"}, rows, tmp, name, name, n)
                 part.dialect = {**found, "header": True}
+                part.tableName = name
                 parts.append(part)
             for part, s in zip(parts, unique_slugs(names)):
                 part.slug = s if len(parts) > 1 else "main"
@@ -398,13 +408,13 @@ def profile(path: Path, kind: str, cfg, tmp: Path, detail: dict) -> list[Part]:
                 raise EngineError("no-table-in-workbook")
             return parts
         if kind == "PARQUET":
-            return [parquet_part(con, path, detail, rows)]
+            return [parquet_part(con, path, detail, rows, n)]
         if kind in ("JSON", "JSONL"):
             src, key = (path, None) if kind == "JSONL" else json_records(path, tmp)
             source = f"read_json({lit(src)}, format='newline_delimited', sample_size=-1, maximum_depth=2)"
-            fields, n = profile_relation(con, source, rows)
+            fields, count = profile_relation(con, source, rows, n_sample=n)
             integral_numbers(con, fields)
-            part = Part(label=key, rowCount=n, fields=fields)
+            part = Part(label=key, rowCount=count, fields=fields)
             if key:
                 part.dialect = {"recordsPath": f"/{key}"}
             part.keysUnique = keys_unique(con, part)
@@ -414,12 +424,13 @@ def profile(path: Path, kind: str, cfg, tmp: Path, detail: dict) -> list[Part]:
         con.close()
 
 
-def csv_part(con, path: Path, detail: dict, rows: int, tmp: Path, slug: str, label: str | None) -> Part:
+def csv_part(con, path: Path, detail: dict, rows: int, tmp: Path, slug: str, label: str | None,
+             n_sample: int = 0) -> Part:
     enc = detail.get("encoding", "utf-8")
     src_path = to_utf8(path, enc, tmp)
     source, dialect = csv_source(con, src_path, detail)
     try:
-        fields, n = profile_relation(con, source, rows)
+        fields, n = profile_relation(con, source, rows, n_sample=n_sample)
     except duckdb.Error as e:
         raise EngineError(f"duckdb:{str(e).splitlines()[0]}"[:200])
     reconcile(fields, frictionless_types(src_path, dialect["delimiter"], dialect.get("skipRows", 0)))
@@ -432,7 +443,7 @@ def csv_part(con, path: Path, detail: dict, rows: int, tmp: Path, slug: str, lab
     return part
 
 
-def parquet_part(con, path: Path, detail: dict, rows: int) -> Part:
+def parquet_part(con, path: Path, detail: dict, rows: int, n_sample: int = 0) -> Part:
     p = lit(path)
     total = con.sql(f"SELECT SUM(num_rows) FROM parquet_file_metadata({p})").fetchall()[0][0]
     if detail.get("footerOnly"):
@@ -451,7 +462,7 @@ def parquet_part(con, path: Path, detail: dict, rows: int) -> Part:
                            "nullPercentage": round(100 * (s[2] or 0) / total, 2) if total else None}.items()
                            if v is not None}
         return Part(rowCount=total, fields=fields)
-    fields, n = profile_relation(con, f"read_parquet({p})", rows)
+    fields, n = profile_relation(con, f"read_parquet({p})", rows, n_sample=n_sample)
     part = Part(rowCount=total or n, fields=fields)
     part.keysUnique = keys_unique(con, part)
     return part

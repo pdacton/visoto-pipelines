@@ -1,7 +1,8 @@
 # Implementation plan
 
-Status: phases 0–9 implemented on one branch and PR (2026-11-03), except
-verifying a manual import in visoto-qlever. Deviations from this plan are
+Status: phases 0–9 implemented (2026-11-03); import verified 2026-11-10.
+Output vocabulary moved from `prof:` to `ap:` on 2026-11-10 (concept-matching
+phase 0); `prof:` terms below are historical. Deviations from this plan are
 listed under [Implementation notes](#implementation-notes-2026-11-03).
 
 The pipeline is built in phases. Each phase ends in a working
@@ -223,8 +224,10 @@ Done when the RDF test datasets produce shapes per class.
 - [x] Document the import in `01-purpose.md`: upload `out/auto-profiling.ttl`
   to `visoto-qlever`, graph `urn:data:auto-profiling-githubpipeline`, using
   replace on load, which is an open question for the i14y pipeline as well.
-- [ ] Verify the import with the visoto MCP: count `prof:Structure`,
+- [x] Verify the import with the visoto MCP: count `prof:Structure`,
   `sh:PropertyShape` and `cube:Constraint`, and spot-check 3 datasets.
+  Done 2026-11-10 on a local visoto-qlever, after the move to `ap:`; see
+  [01-purpose.md](01-purpose.md#import-into-visoto).
 
 Done when the larger run finishes unattended, with failures explained in the
 report.

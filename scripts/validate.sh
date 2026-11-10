@@ -12,7 +12,13 @@ ttl="$OUT/$NAME.ttl"
 
 log "SHACL"
 report="$OUT/shacl-report.ttl"
-shacl validate --shapes "$PIPELINE_DIR/shapes.ttl" --data "$ttl" > "$report"
+# SHAPES in pipeline.env lists shape files relative to the pipeline folder (default shapes.ttl);
+# several are merged into one shapes graph. owl:imports are dropped: Jena's shacl would fetch them
+# over HTTP, and a vocabulary namespace need not resolve (yet).
+shapes="$OUT/shapes-merged.nt"
+(cd "$PIPELINE_DIR" && riot --output=nt ${SHAPES:-shapes.ttl}) \
+  | grep -v '<http://www.w3.org/2002/07/owl#imports>' > "$shapes"
+shacl validate --shapes "$shapes" --data "$ttl" > "$report"
 if ! grep -q 'sh:conforms *true' "$report"; then
   grep -E 'sh:resultMessage|sh:focusNode' "$report" | head -40 >&2
   die "SHACL validation failed, see $report"

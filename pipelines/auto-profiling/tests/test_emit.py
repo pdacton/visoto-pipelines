@@ -4,9 +4,9 @@ from pathlib import Path
 from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.collection import Collection
 from rdflib.compare import isomorphic, to_isomorphic
-from rdflib.namespace import RDF, SH
+from rdflib.namespace import DCAT, DCTERMS, RDF, SH
 
-from autoprof.emit import Emitter, vocab_graph
+from autoprof.emit import AP, CSVW, RML, Emitter, vocab_graph
 from autoprof.model import Structure
 from conftest import FIXTURES
 
@@ -62,6 +62,15 @@ def test_equivalent_to_prototype_cube():
     assert dims(ours) == dims(proto)
 
 
+def shapes() -> Graph:
+    """The shapes graph scripts/validate.sh builds: every file in pipeline.env SHAPES."""
+    from autoprof.config import Config
+    g = Graph()
+    for f in Config.load(PIPELINE)["SHAPES"].split():
+        g.parse(PIPELINE / f)
+    return g
+
+
 def test_output_conforms_to_shapes():
     from pyshacl import validate
     s = Structure.read(FIXTURES / "bevoelkerung.profile.json")
@@ -70,8 +79,8 @@ def test_output_conforms_to_shapes():
                      distributions=["https://opendata.swiss/set/distribution/y"],
                      status="skipped", statusReason="out-of-scope:WMS", declared=["WMS"])
     em = Emitter(BASE, URIRef(BASE + "run/test"))
-    g = em.structure(s, {}) + em.structure(stub, {}) + vocab_graph(PIPELINE / "vocab" / "prof.ttl", BASE)
-    conforms, _, text = validate(g, shacl_graph=Graph().parse(PIPELINE / "shapes.ttl"))
+    g = em.structure(s, {}) + em.structure(stub, {}) + vocab_graph(PIPELINE / "vocab" / "ap.ttl")
+    conforms, _, text = validate(g, shacl_graph=shapes())
     assert conforms, text
 
 
@@ -81,14 +90,87 @@ def test_shapes_reject_a_profiled_structure_without_parts():
                        representative="https://opendata.swiss/set/distribution/z",
                        distributions=["https://opendata.swiss/set/distribution/z"])
     g = Emitter(BASE, URIRef(BASE + "run/test")).structure(broken, {})
-    conforms, _, _ = validate(g, shacl_graph=Graph().parse(PIPELINE / "shapes.ttl"))
+    conforms, _, _ = validate(g, shacl_graph=shapes())
     assert not conforms
 
 
-def test_base_iri_moves_vocab():
-    g = vocab_graph(PIPELINE / "vocab" / "prof.ttl", "https://visoto.example/ap/")
-    assert (URIRef("https://visoto.example/ap/prof#Structure"), None, None) in g
-    assert not any("example.org/auto-profiling/prof#" in str(s) for s in g.subjects())
+def test_every_ap_term_is_defined_in_the_vocabulary():
+    vocab = vocab_graph(PIPELINE / "vocab" / "ap.ttl")
+    g = emit_bevoelkerung()
+    used = {t for triple in g for t in triple if isinstance(t, URIRef) and str(t).startswith(str(AP))}
+    used -= {URIRef(BASE)}
+    assert used and all((t, None, None) in vocab for t in used), sorted(t for t in used if (t, None, None) not in vocab)
+
+
+def test_no_prof_terms_left():
+    g = emit_bevoelkerung()
+    assert not any("prof#" in str(t) for triple in g for t in triple)
+
+
+def test_logical_source_of_a_csv():
+    g = emit_bevoelkerung()
+    [ls] = g.subjects(RDF.type, RML.LogicalSource)
+    container = g.value(ls, AP.container)
+    assert (None, DCTERMS.hasPart, container) in g
+    assert g.value(ls, RML.referenceFormulation) == RML.CSV
+    dialect = g.value(ls, CSVW.dialect)
+    assert dialect is not None and g.value(dialect, CSVW.delimiter) is not None
+    assert g.value(container, CSVW.dialect) is None   # moved off the shape
+
+
+def test_logical_source_of_records_and_sheets():
+    from autoprof.model import Field, Part
+    s = Structure(id="j", dataset="https://example.org/d", representative="https://example.org/x",
+                  distributions=["https://example.org/x"], engine="tabular",
+                  parts=[Part(slug="data", dialect={"recordsPath": "/results"}, fields=[Field(name="a", type="string")]),
+                         Part(slug="sheet_2", label="Sheet 2", tableName="Sheet 2", dialect={"header": True, "skipRows": 3},
+                              fields=[Field(name="b", type="integer")])])
+    g = Emitter(BASE, URIRef(BASE + "run/test")).structure(s, {"https://example.org/x": {
+        "downloadURL": "https://example.org/file.json"}})
+    sources = {str(g.value(ls, AP.container)).rsplit("/", 1)[-1]: ls for ls in g.subjects(RDF.type, RML.LogicalSource)}
+    assert str(g.value(sources["data"], RML.iterator)) == "$.results[*]"
+    assert g.value(sources["data"], RML.referenceFormulation) == RML.JSONPath
+    assert str(g.value(sources["sheet_2"], AP.tableName)) == "Sheet 2"
+    assert g.value(URIRef("https://example.org/x"), DCAT.downloadURL) == URIRef("https://example.org/file.json")
+
+
+def test_json_path():
+    from autoprof.emit import json_path
+    assert json_path("/") == "$[*]"
+    assert json_path("/results") == "$.results[*]"
+    assert json_path("/my key") == "$['my key'][*]"
+
+
+def test_slots_jsonl_records():
+    s = Structure.read(FIXTURES / "bevoelkerung.profile.json")
+    em = Emitter(BASE, URIRef(BASE + "run/test"))
+    g = em.structure(s, {})
+    by_name = {r["name"]: r for r in em.slots}
+    assert len(em.slots) == len(list(g.subjects(RDF.type, AP.Slot)))
+    r = next(iter(by_name.values()))
+    assert set(r["key"]) == {"dataset", "distributions", "container", "sourceName"}
+    assert r["key"]["container"] == "main" and r["key"]["dataset"] == s.dataset
+    for r in em.slots:   # the fingerprint triple matches the record
+        assert str(g.value(URIRef(r["iri"]), AP.fingerprint)) == r["fingerprint"]
+        assert r["name"] not in r["neighbours"] or len(set(f.name for p in s.parts for f in p.fields)) < len(r["neighbours"])
+
+
+def test_fingerprint_ignores_sample_order_and_name_spelling():
+    from autoprof.emit import fingerprint
+    a = fingerprint("BFS-Nr", "http://www.w3.org/2001/XMLSchema#integer", ["261", "351"])
+    assert a == fingerprint("bfs_nr", "http://www.w3.org/2001/XMLSchema#integer", ["351", "261"])
+    assert a != fingerprint("bfs_nr", "http://www.w3.org/2001/XMLSchema#string", ["351", "261"])
+    assert a != fingerprint("bfs_nr", "http://www.w3.org/2001/XMLSchema#integer", ["351"])
+
+
+def test_value_sample_is_deterministic_and_bounded():
+    from autoprof.model import value_sample
+    values = [str(i) for i in range(1000)] + [None, "", "  ", "x" * 500]
+    a = value_sample(values, 200)
+    assert a == value_sample(reversed(values), 200)
+    assert len(a) == 200 and len(set(a)) == 200
+    assert all(len(v) <= 200 for v in value_sample(["x" * 500], 5))
+    assert value_sample([None, "", 1, 1, "1"], 5) == ["1"]
 
 
 def test_status_stub_links_every_member():

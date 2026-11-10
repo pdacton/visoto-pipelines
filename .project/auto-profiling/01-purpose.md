@@ -37,22 +37,47 @@ done in a separate session once the triples are loaded.
 2. Open <https://visoto.hutzli.org/?endpoint=visoto-qlever>, open the upload
    modal, choose the file `pipelines/auto-profiling/out/auto-profiling.ttl`
    and the named graph `urn:data:auto-profiling-githubpipeline`.
-3. Replace the graph on load rather than adding to it: IRIs are stable across
-   runs, but observed statistics and the run IRI change, so adding would keep
-   stale profiles. (Whether the modal replaces or appends is the same open
-   question as for the i14y pipeline.)
+3. Replace the graph, don't add to it: observed statistics and the run IRI
+   change with every run, and IRIs change when a structure's representative
+   distribution changes, so adding would keep stale structures. The upload
+   modal **appends** (Graph Store POST, verified 2026-11-10). To replace,
+   delete the graph first (visoto's named-graph list, `DELETE
+   /api/named-graphs`) and then upload, or send a Graph Store **PUT**, which
+   QLever supports and which replaces only the named graph. Either way only
+   that one graph changes; the concept-matching confirmations graph is never
+   touched.
 4. Check the load, e.g. with the visoto MCP `run_sparql_query` on
    `visoto-qlever`:
 
    ```sparql
+   PREFIX ap: <https://register.ld.admin.ch/mds/ontology/ap/>
    SELECT ?class (COUNT(?s) AS ?n) WHERE {
      GRAPH <urn:data:auto-profiling-githubpipeline> { ?s a ?class }
-     VALUES ?class { <https://example.org/auto-profiling/prof#Structure>
-                     <http://www.w3.org/ns/shacl#PropertyShape> <https://cube.link/Constraint> }
+     VALUES ?class { ap:DataStructure ap:Container ap:Slot ap:Observation
+                     <http://w3id.org/rml/LogicalSource> <https://cube.link/Constraint> }
    } GROUP BY ?class
    ```
 
    and compare with the `classes` counts in `out/auto-profiling.meta.json`.
+
+Verified 2026-11-10 on a local visoto-qlever with the 500-dataset run
+(1,109,366 triples, 84 MB Turtle): loaded in 16 s, class counts equal to
+`meta.json`, three structures (tabular, geo, PX) spot-checked. The load grew
+QLever's memory by about 510 MiB: uploaded triples are kept as delta triples
+in memory, about 460 bytes each.
+
+### Size
+
+| Run | Distributions | Triples | Turtle | slots.jsonl |
+|---|---|---|---|---|
+| 500 datasets (2026-11-10) | 3,293 | 1.11M | 84 MB | 61 MB |
+| all of ODS (extrapolated) | ~35,500 | ~12M | ~900 MB | ~660 MB |
+
+A full run does not fit the current import path: the file exceeds the upload
+modal's `max_upload_mb` (200), and as delta triples it would take about
+5.5 GB of visoto-qlever's memory. Before a full run, decide between loading it
+into the QLever index (rebuild, as the bootstrap index is built) and splitting
+it into several graphs.
 
 ## Scope
 
@@ -96,8 +121,8 @@ Stages, each rerunnable from the files of the previous one:
 resolve  datasets.txt → raw/distributions.json         (SPARQL)
 fetch    → raw/samples/*, raw/sniff.json                (HTTP, sniffing)
 profile  → out/profiles/*.json                          (format engines)
-emit     → out/parts/*.nt → out/auto-profiling.ttl      (SHACL + prof:)
-validate → shapes.ttl, checks/*.rq                      (existing validate.sh)
+emit     → out/parts/*.nt → out/auto-profiling.ttl      (SHACL + ap:), out/slots.jsonl
+validate → shapes.ttl + vocab/ap-shapes.ttl, checks/*.rq (validate.sh)
 ```
 
 `resolve` and `fetch` belong to `fetch.sh`; `profile` and `emit` belong to

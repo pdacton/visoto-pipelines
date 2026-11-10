@@ -1,0 +1,479 @@
+# Copied from metadata-swiss/mds-datamodel ontology/autoprofiling/autoprofiling.ttl (c815874); edit it there, then copy.
+# Auto-profiling vocabulary (ap:)
+#
+# Describes the structure of a dataset at two levels:
+#   logical  – ap:DataStructure ▸ ap:Container (sh:NodeShape) ▸ ap:Slot (sh:PropertyShape),
+#              with observations, sentinels, concept candidates and matches;
+#   physical – rml:LogicalSource (where and how a container is read from a dcat:Distribution)
+#              and rml:TriplesMap / rml:PredicateObjectMap (conversion rules to RDF).
+# Observations describe a sample of one profiling run; they are never constraints.
+
+@prefix ap:   <https://register.ld.admin.ch/mds/ontology/ap/> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rml:  <http://w3id.org/rml/> .
+@prefix mdr:  <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+<https://register.ld.admin.ch/mds/ontology/ap/> a owl:Ontology ;
+    rdfs:label "Auto-profiling vocabulary"@en ;
+    rdfs:comment "Logical and physical description of dataset structures, as detected by profiling distributions, and the links from their slots to a metadata registry (mdr:)."@en ;
+    owl:versionInfo "0.2.0" ;
+    dct:created "2026-11-06"^^xsd:date ;
+    dct:modified "2026-11-10"^^xsd:date ;
+    rdfs:seeAlso <http://www.w3.org/ns/shacl#>, <http://w3id.org/rml/> .
+
+# =====================================================================================
+# Logical part
+# =====================================================================================
+
+# --- data structure -------------------------------------------------------------------
+
+ap:DataStructure a owl:Class ;
+    rdfs:label "Data structure"@en ;
+    rdfs:comment "The logical structure of one or more equivalent distributions. Its parts (dct:hasPart) are containers. Distributions point to it with dct:conformsTo, as I14Y structures do."@en ;
+    rdfs:isDefinedBy ap: .
+
+ap:structure a owl:ObjectProperty ;
+    rdfs:label "structure"@en ;
+    rdfs:comment "The data structure of a dataset. Derivable: set when all profiled distributions of the dataset conform to the same structure. The primary link is dcat:Distribution dct:conformsTo ap:DataStructure."@en ;
+    rdfs:domain dcat:Dataset ;
+    rdfs:range ap:DataStructure ;
+    rdfs:isDefinedBy ap: .
+
+ap:status a owl:ObjectProperty ;
+    rdfs:label "status"@en ;
+    rdfs:domain ap:DataStructure ;
+    rdfs:range ap:Status ;
+    rdfs:isDefinedBy ap: .
+
+ap:statusReason a owl:DatatypeProperty ;
+    rdfs:label "status reason"@en ;
+    rdfs:comment "Why a structure was skipped or failed, e.g. out-of-scope:WMS, too-large, http-404."@en ;
+    rdfs:domain ap:DataStructure ;
+    rdfs:range xsd:string ;
+    rdfs:isDefinedBy ap: .
+
+ap:declaredFormat a owl:ObjectProperty ;
+    rdfs:label "declared format"@en ;
+    rdfs:comment "A format the DCAT metadata states (dct:format, dcat:mediaType or URL); several when they conflict. The detected format is dct:format."@en ;
+    rdfs:domain ap:DataStructure ;
+    rdfs:isDefinedBy ap: .
+
+ap:formatMatch a owl:DatatypeProperty ;
+    rdfs:label "format match"@en ;
+    rdfs:comment "Whether the detected format agrees with a declared one."@en ;
+    rdfs:domain ap:DataStructure ;
+    rdfs:range xsd:boolean ;
+    rdfs:isDefinedBy ap: .
+
+ap:profiledDistribution a owl:ObjectProperty ;
+    rdfs:label "profiled distribution"@en ;
+    rdfs:comment "The representative distribution whose sample was profiled."@en ;
+    rdfs:domain ap:DataStructure ;
+    rdfs:range dcat:Distribution ;
+    rdfs:isDefinedBy ap: .
+
+ap:engine a owl:DatatypeProperty ;
+    rdfs:label "engine"@en ;
+    rdfs:comment "The profiling engine used, e.g. tabular, geo, px, tree, rdf."@en ;
+    rdfs:domain ap:DataStructure ;
+    rdfs:range xsd:string ;
+    rdfs:isDefinedBy ap: .
+
+ap:Status a owl:Class ;
+    rdfs:label "Profiling status"@en ;
+    rdfs:isDefinedBy ap: .
+
+ap:profiled a ap:Status ; rdfs:label "profiled"@en ;
+    rdfs:comment "A structure was detected."@en ; rdfs:isDefinedBy ap: .
+ap:skipped a ap:Status ; rdfs:label "skipped"@en ;
+    rdfs:comment "Not profiled by design: out of scope, too large or unreachable."@en ; rdfs:isDefinedBy ap: .
+ap:failed a ap:Status ; rdfs:label "failed"@en ;
+    rdfs:comment "Profiling was attempted and failed; ap:statusReason says why."@en ; rdfs:isDefinedBy ap: .
+
+# --- container --------------------------------------------------------------------------
+
+ap:Container a owl:Class ;
+    rdfs:subClassOf sh:NodeShape ;
+    rdfs:label "Container"@en ;
+    rdfs:comment "A logical record type: a table, sheet, layer, class, or an entity nested in another container (physically nested, e.g. JSON, or denormalized into the same rows). Nesting is expressed with sh:node on a slot."@en ;
+    rdfs:isDefinedBy ap: .
+
+ap:mainObjectClass a owl:ObjectProperty ;
+    rdfs:label "main object class"@en ;
+    rdfs:comment "The registry object class of the entity a container describes (e.g. Person). Derived from the object classes of the data element concepts its slots link to; the object class links to ontology classes (schema:Person) with skos:closeMatch. Attributes of other entities (denormalized) form nested containers with their own main object class."@en ;
+    rdfs:domain ap:Container ;
+    rdfs:range mdr:ObjectClass ;
+    rdfs:isDefinedBy ap: .
+
+ap:rowCount a owl:DatatypeProperty ;
+    rdfs:label "row count"@en ;
+    rdfs:comment "Rows, features or cells of a container: the total where the format states it, otherwise the sample's."@en ;
+    rdfs:domain ap:Container ;
+    rdfs:range xsd:integer ;
+    rdfs:isDefinedBy ap: .
+
+ap:geometryType a owl:DatatypeProperty ;
+    rdfs:label "geometry type"@en ;
+    rdfs:comment "OGC geometry type of a layer, e.g. MultiPolygon."@en ;
+    rdfs:domain ap:Container ;
+    rdfs:isDefinedBy ap: .
+
+ap:crs a owl:ObjectProperty ;
+    rdfs:label "coordinate reference system"@en ;
+    rdfs:comment "EPSG IRI of a layer's CRS."@en ;
+    rdfs:domain ap:Container ;
+    rdfs:isDefinedBy ap: .
+
+ap:functionalDependency a owl:ObjectProperty ;
+    rdfs:label "functional dependency"@en ;
+    rdfs:comment "A functional dependency observed in the container's sample."@en ;
+    rdfs:domain ap:Container ;
+    rdfs:range ap:FunctionalDependency ;
+    rdfs:isDefinedBy ap: .
+
+ap:FunctionalDependency a owl:Class ;
+    rdfs:label "Functional dependency"@en ;
+    rdfs:comment "Every value of the determinant slot has exactly one value of each dependent slot in the sample. A determinant with dependents is a candidate nested container (denormalized entity). Observed, never a constraint."@en ;
+    rdfs:isDefinedBy ap: .
+
+ap:determinant a owl:ObjectProperty ;
+    rdfs:label "determinant"@en ;
+    rdfs:domain ap:FunctionalDependency ;
+    rdfs:range ap:Slot ;
+    rdfs:isDefinedBy ap: .
+
+ap:dependent a owl:ObjectProperty ;
+    rdfs:label "dependent"@en ;
+    rdfs:domain ap:FunctionalDependency ;
+    rdfs:range ap:Slot ;
+    rdfs:isDefinedBy ap: .
+
+# --- slot -----------------------------------------------------------------------------
+
+ap:Slot a owl:Class ;
+    rdfs:subClassOf sh:PropertyShape ;
+    rdfs:label "Slot"@en ;
+    rdfs:comment "A logical attribute of a container (a column, field or property). Constraints are SHACL (sh:datatype, sh:in, cardinality); what was observed hangs off ap:observed."@en ;
+    rdfs:isDefinedBy ap: .
+
+ap:sourceName a owl:DatatypeProperty ;
+    rdfs:label "source name"@en ;
+    rdfs:comment "The slot's code in the source when sh:name shows its label (e.g. PX). Superseded by rml:reference once a mapping exists."@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:isDefinedBy ap: .
+
+ap:format a owl:DatatypeProperty ;
+    rdfs:label "format"@en ;
+    rdfs:comment "Table Schema format of a slot, e.g. a date pattern or a time unit."@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:isDefinedBy ap: .
+
+ap:categorical a owl:DatatypeProperty ;
+    rdfs:label "categorical"@en ;
+    rdfs:comment "Few distinct values relative to rows: a code list candidate (its values are the sh:in)."@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:range xsd:boolean ;
+    rdfs:isDefinedBy ap: .
+
+ap:booleanCandidate a owl:DatatypeProperty ;
+    rdfs:label "boolean candidate"@en ;
+    rdfs:comment "Two distinct values that read as yes/no."@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:range xsd:boolean ;
+    rdfs:isDefinedBy ap: .
+
+ap:codeLabel a owl:ObjectProperty ;
+    rdfs:label "code label"@en ;
+    rdfs:comment "A code of the slot (skos:notation) with its labels per language (skos:prefLabel)."@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:isDefinedBy ap: .
+
+ap:unitLabel a owl:DatatypeProperty ;
+    rdfs:label "unit label"@en ;
+    rdfs:comment "The unit as published, kept when it doesn't map to a QUDT unit."@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:isDefinedBy ap: .
+
+# --- sentinels ------------------------------------------------------------------------
+
+ap:sentinel a owl:ObjectProperty ;
+    rdfs:label "sentinel"@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:range ap:Sentinel ;
+    rdfs:isDefinedBy ap: .
+
+ap:Sentinel a owl:Class ;
+    rdfs:label "Sentinel"@en ;
+    rdfs:comment "A code with a special meaning in a slot instead of a value, e.g. '..' (not available), 'x' (confidential), '-' (not applicable). The code is skos:notation, the meaning skos:prefLabel or ap:sentinelMeaning."@en ;
+    rdfs:isDefinedBy ap: .
+
+ap:sentinelMeaning a owl:ObjectProperty ;
+    rdfs:label "sentinel meaning"@en ;
+    rdfs:comment "A controlled meaning of the sentinel, e.g. a concept for 'missing' or 'confidential'."@en ;
+    rdfs:domain ap:Sentinel ;
+    rdfs:isDefinedBy ap: .
+
+# --- observations ---------------------------------------------------------------------
+
+ap:observed a owl:ObjectProperty ;
+    rdfs:label "observed"@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:range ap:Observation ;
+    rdfs:isDefinedBy ap: .
+
+ap:Observation a owl:Class ;
+    rdfs:label "Observation"@en ;
+    rdfs:comment "Statistics of one slot in the sample of one run (prov:wasGeneratedBy). Changes with every run; never a constraint. ap:nullPercentage measures completeness in the sense of ISO/IEC 25012."@en ;
+    rdfs:isDefinedBy ap: .
+
+ap:count a owl:DatatypeProperty ; rdfs:label "count"@en ;
+    rdfs:comment "Rows or instances in the sample."@en ;
+    rdfs:domain ap:Observation ; rdfs:range xsd:integer ; rdfs:isDefinedBy ap: .
+ap:nullPercentage a owl:DatatypeProperty ; rdfs:label "null percentage"@en ;
+    rdfs:domain ap:Observation ; rdfs:range xsd:decimal ; rdfs:isDefinedBy ap: .
+ap:distinct a owl:DatatypeProperty ; rdfs:label "distinct values"@en ;
+    rdfs:comment "Exact up to 50, approximate above."@en ;
+    rdfs:domain ap:Observation ; rdfs:range xsd:integer ; rdfs:isDefinedBy ap: .
+ap:minValue a owl:DatatypeProperty ; rdfs:label "minimum value"@en ;
+    rdfs:domain ap:Observation ; rdfs:isDefinedBy ap: .
+ap:maxValue a owl:DatatypeProperty ; rdfs:label "maximum value"@en ;
+    rdfs:domain ap:Observation ; rdfs:isDefinedBy ap: .
+ap:mean a owl:DatatypeProperty ; rdfs:label "mean"@en ;
+    rdfs:domain ap:Observation ; rdfs:range xsd:decimal ; rdfs:isDefinedBy ap: .
+ap:std a owl:DatatypeProperty ; rdfs:label "standard deviation"@en ;
+    rdfs:domain ap:Observation ; rdfs:range xsd:decimal ; rdfs:isDefinedBy ap: .
+ap:q25 a owl:DatatypeProperty ; rdfs:label "first quartile"@en ;
+    rdfs:domain ap:Observation ; rdfs:isDefinedBy ap: .
+ap:q50 a owl:DatatypeProperty ; rdfs:label "median"@en ;
+    rdfs:domain ap:Observation ; rdfs:isDefinedBy ap: .
+ap:q75 a owl:DatatypeProperty ; rdfs:label "third quartile"@en ;
+    rdfs:domain ap:Observation ; rdfs:isDefinedBy ap: .
+ap:minLength a owl:DatatypeProperty ; rdfs:label "minimum length"@en ;
+    rdfs:comment "Shortest value in characters."@en ;
+    rdfs:domain ap:Observation ; rdfs:range xsd:integer ; rdfs:isDefinedBy ap: .
+ap:maxLength a owl:DatatypeProperty ; rdfs:label "maximum length"@en ;
+    rdfs:comment "Longest value in characters."@en ;
+    rdfs:domain ap:Observation ; rdfs:range xsd:integer ; rdfs:isDefinedBy ap: .
+ap:pattern a owl:DatatypeProperty ; rdfs:label "pattern"@en ;
+    rdfs:comment "A regular expression (SPARQL/XPath syntax, as sh:pattern) that the observed values match. Observed, so possibly incomplete; not a sh:pattern constraint."@en ;
+    rdfs:domain ap:Observation ; rdfs:range xsd:string ; rdfs:isDefinedBy ap: .
+ap:valueHistogram a owl:DatatypeProperty ; rdfs:label "value histogram"@en ;
+    rdfs:comment "Value frequencies or bins as JSON, e.g. {\"BE\": 20, \"ZH\": 10} or [{\"from\": 0, \"to\": 10, \"count\": 5}]."@en ;
+    rdfs:domain ap:Observation ; rdfs:range rdf:JSON ; rdfs:isDefinedBy ap: .
+ap:example a owl:DatatypeProperty ; rdfs:label "example"@en ;
+    rdfs:comment "At most 3 per slot, truncated to 200 characters."@en ;
+    rdfs:domain ap:Observation ; rdfs:isDefinedBy ap: .
+ap:support a owl:DatatypeProperty ; rdfs:label "support"@en ;
+    rdfs:comment "Share of instances (RDF) that use the property."@en ;
+    rdfs:domain ap:Observation ; rdfs:range xsd:decimal ; rdfs:isDefinedBy ap: .
+ap:maxItems a owl:DatatypeProperty ; rdfs:label "maximum items"@en ;
+    rdfs:comment "Most values of a repeated JSON/XML field within one parent."@en ;
+    rdfs:domain ap:Observation ; rdfs:range xsd:integer ; rdfs:isDefinedBy ap: .
+ap:maxPerInstance a owl:DatatypeProperty ; rdfs:label "maximum per instance"@en ;
+    rdfs:comment "Most values of an RDF property on one instance."@en ;
+    rdfs:domain ap:Observation ; rdfs:range xsd:integer ; rdfs:isDefinedBy ap: .
+
+# --- links to the metadata registry: candidates, matches, shortcuts -------------------
+
+ap:fingerprint a owl:DatatypeProperty ;
+    rdfs:label "fingerprint"@en ;
+    rdfs:comment "Hash of the slot's normalised name, datatype and value sample. Slots with the same fingerprint are matched once; the result applies to each of them."@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:range xsd:string ;
+    rdfs:isDefinedBy ap: .
+
+ap:candidate a owl:ObjectProperty ;
+    rdfs:label "candidate"@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:range ap:Candidate ;
+    rdfs:isDefinedBy ap: .
+
+ap:Candidate a owl:Class ;
+    rdfs:label "Candidate"@en ;
+    rdfs:comment "A registry entry proposed for a slot by automatic matching, ranked and scored, with its evidence. Not accepted; regenerated on every run."@en ;
+    rdfs:isDefinedBy ap: .
+
+ap:match a owl:ObjectProperty ;
+    rdfs:label "match"@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:range ap:Match ;
+    rdfs:isDefinedBy ap: .
+
+ap:Match a owl:Class ;
+    rdfs:label "Match"@en ;
+    rdfs:comment "An accepted link between a slot and a registry entry: by a person, or automatically by the run that found it. Who accepted it is prov:wasAttributedTo. A person's match carries a re-attach key (ap:keyDataset, ap:keyDistribution, ap:keyContainer, ap:keySourceName), so it can be moved to the slot's new IRI after a rerun. A person's match wins over an automatic one."@en ;
+    rdfs:isDefinedBy ap: .
+
+ap:concept a owl:ObjectProperty ;
+    rdfs:label "concept"@en ;
+    rdfs:comment "The registry entry a candidate proposes or a match accepts. Its class says what was linked: a value domain (representation), a data element concept (meaning) or a data element (both)."@en ;
+    rdfs:range [ a owl:Class ; owl:unionOf ( mdr:ValueDomain mdr:DataElementConcept mdr:DataElement ) ] ;
+    rdfs:isDefinedBy ap: .
+
+ap:matchType a owl:ObjectProperty ;
+    rdfs:label "match type"@en ;
+    rdfs:comment "How closely the entry fits the slot: a SKOS mapping property, normally skos:exactMatch, else skos:closeMatch, skos:broadMatch or skos:narrowMatch."@en ;
+    rdfs:domain ap:Match ;
+    rdfs:isDefinedBy ap: .
+
+ap:candidateRank a owl:DatatypeProperty ;
+    rdfs:label "candidate rank"@en ;
+    rdfs:comment "1 for the best candidate of a slot."@en ;
+    rdfs:domain ap:Candidate ;
+    rdfs:range xsd:integer ;
+    rdfs:isDefinedBy ap: .
+
+ap:candidateScore a owl:DatatypeProperty ;
+    rdfs:label "candidate score"@en ;
+    rdfs:comment "Matching score between 0 and 1."@en ;
+    rdfs:range xsd:decimal ;
+    rdfs:isDefinedBy ap: .
+
+# evidence
+
+ap:evidence a owl:ObjectProperty ;
+    rdfs:label "evidence"@en ;
+    rdfs:comment "Why a candidate or match was proposed."@en ;
+    rdfs:range ap:Evidence ;
+    rdfs:isDefinedBy ap: .
+
+ap:Evidence a owl:Class ;
+    rdfs:label "Evidence"@en ;
+    rdfs:comment "The method that proposed a link and what it measured."@en ;
+    rdfs:isDefinedBy ap: .
+
+ap:method a owl:DatatypeProperty ;
+    rdfs:label "method"@en ;
+    rdfs:comment "code-overlap, id-validator, rule (described value domain), embedding, llm, or confirmed-elsewhere (a person accepted the same link for a slot with the same fingerprint)."@en ;
+    rdfs:domain ap:Evidence ;
+    rdfs:range xsd:string ;
+    rdfs:isDefinedBy ap: .
+
+ap:containment a owl:DatatypeProperty ;
+    rdfs:label "containment"@en ;
+    rdfs:comment "code-overlap: share of the slot's distinct values found in one level of a code list (0–1)."@en ;
+    rdfs:domain ap:Evidence ;
+    rdfs:range xsd:decimal ;
+    rdfs:isDefinedBy ap: .
+
+ap:coverage a owl:DatatypeProperty ;
+    rdfs:label "coverage"@en ;
+    rdfs:comment "code-overlap: share of that level's codes seen in the slot (0–1); low is normal for samples and subsets."@en ;
+    rdfs:domain ap:Evidence ;
+    rdfs:range xsd:decimal ;
+    rdfs:isDefinedBy ap: .
+
+ap:level a owl:ObjectProperty ;
+    rdfs:label "level"@en ;
+    rdfs:comment "code-overlap: the level (xkos:ClassificationLevel) of a hierarchical code list the slot's values belong to, e.g. municipalities in a canton/district/municipality list."@en ;
+    rdfs:domain ap:Evidence ;
+    rdfs:isDefinedBy ap: .
+
+ap:rationale a owl:DatatypeProperty ;
+    rdfs:label "rationale"@en ;
+    rdfs:comment "llm: the model's reason for its answer."@en ;
+    rdfs:domain ap:Evidence ;
+    rdfs:isDefinedBy ap: .
+
+# re-attach key of a person's match
+
+ap:keyDataset a owl:ObjectProperty ;
+    rdfs:label "key: dataset"@en ;
+    rdfs:comment "Re-attach key: the dataset of the slot's structure."@en ;
+    rdfs:domain ap:Match ;
+    rdfs:range dcat:Dataset ;
+    rdfs:isDefinedBy ap: .
+
+ap:keyDistribution a owl:ObjectProperty ;
+    rdfs:label "key: distribution"@en ;
+    rdfs:comment "Re-attach key: a distribution that conforms to the slot's structure (one triple each)."@en ;
+    rdfs:domain ap:Match ;
+    rdfs:range dcat:Distribution ;
+    rdfs:isDefinedBy ap: .
+
+ap:keyContainer a owl:DatatypeProperty ;
+    rdfs:label "key: container"@en ;
+    rdfs:comment "Re-attach key: the container's path within its structure, e.g. 'main' or a sheet or layer slug."@en ;
+    rdfs:domain ap:Match ;
+    rdfs:range xsd:string ;
+    rdfs:isDefinedBy ap: .
+
+ap:keySourceName a owl:DatatypeProperty ;
+    rdfs:label "key: source name"@en ;
+    rdfs:comment "Re-attach key: the slot's name in the source (column, field or property name)."@en ;
+    rdfs:domain ap:Match ;
+    rdfs:range xsd:string ;
+    rdfs:isDefinedBy ap: .
+
+# shortcuts, derived from every match
+
+ap:valueDomain a owl:ObjectProperty ;
+    rdfs:label "value domain"@en ;
+    rdfs:comment "Shortcut: the value domain of a match on the slot (representation). Derived; keeps comparison queries short."@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:range mdr:ValueDomain ;
+    rdfs:isDefinedBy ap: .
+
+ap:dataElementConcept a owl:ObjectProperty ;
+    rdfs:label "data element concept"@en ;
+    rdfs:comment "Shortcut: the data element concept of a match on the slot (meaning). Object class and property are reached through it (mdr:objectClass, mdr:property)."@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:range mdr:DataElementConcept ;
+    rdfs:isDefinedBy ap: .
+
+ap:dataElement a owl:ObjectProperty ;
+    rdfs:label "data element"@en ;
+    rdfs:comment "Shortcut: the data element of the slot, the pair of its data element concept and value domain."@en ;
+    rdfs:domain ap:Slot ;
+    rdfs:range mdr:DataElement ;
+    rdfs:isDefinedBy ap: .
+
+# =====================================================================================
+# Physical part (RML, http://w3id.org/rml/)
+# =====================================================================================
+
+ap:container a owl:ObjectProperty ;
+    rdfs:label "container"@en ;
+    rdfs:comment "The logical container a logical source reads. Several logical sources may read the same distribution (rml:source), one per sheet, layer, table or nesting level."@en ;
+    rdfs:domain rml:LogicalSource ;
+    rdfs:range ap:Container ;
+    rdfs:isDefinedBy ap: .
+
+ap:tableName a owl:DatatypeProperty ;
+    rdfs:label "table name"@en ;
+    rdfs:comment "Selects one table in a multi-table source: a spreadsheet sheet, a GeoPackage layer, a WFS feature type or a database table. Generalizes rr:tableName."@en ;
+    rdfs:domain rml:LogicalSource ;
+    rdfs:range xsd:string ;
+    rdfs:isDefinedBy ap: .
+
+ap:slot a owl:ObjectProperty ;
+    rdfs:label "slot"@en ;
+    rdfs:comment "The logical slot a predicate-object map fills. Its rml:predicate is normally the slot's sh:path."@en ;
+    rdfs:domain rml:PredicateObjectMap ;
+    rdfs:range ap:Slot ;
+    rdfs:isDefinedBy ap: .
+
+# =====================================================================================
+# Profiling runs
+# =====================================================================================
+
+ap:sampleRows a owl:DatatypeProperty ;
+    rdfs:label "sample rows"@en ;
+    rdfs:comment "Maximum rows profiled per container in a run."@en ;
+    rdfs:domain prov:Activity ;
+    rdfs:range xsd:integer ;
+    rdfs:isDefinedBy ap: .
+
+ap:toolVersion a owl:DatatypeProperty ;
+    rdfs:label "tool version"@en ;
+    rdfs:comment "A tool and its version used in a run, e.g. 'duckdb 1.1.3'."@en ;
+    rdfs:domain prov:Activity ;
+    rdfs:isDefinedBy ap: .

@@ -11,7 +11,7 @@ import math
 import re
 from pathlib import Path
 
-from ..model import Field, Part
+from ..model import VALUE_SAMPLE, Field, Part, sample_size, value_sample
 from . import EngineError
 
 QUDT_UNIT = "http://qudt.org/vocab/unit/"
@@ -114,7 +114,7 @@ def first(v):
 
 # --- the part -----------------------------------------------------------------------
 
-def build_part(table: dict) -> Part:
+def build_part(table: dict, n_sample: int = VALUE_SAMPLE) -> Part:
     kw = table["keywords"]
     langs = table["languages"]
     main = langs[0]
@@ -145,6 +145,7 @@ def build_part(table: dict) -> Part:
             if len(v["labels"]) > 1 else None
         f.stats.update({"distinct": len(v["values"]), "nullPercentage": 0.0})
         f.examples = [str(t) for t in texts[:3]]
+        f.sample = value_sample(v["values"], n_sample)
         fields.append(f)
 
     decimals = kw.get("DECIMALS")
@@ -169,4 +170,4 @@ def profile(path: Path, token: str, cfg, tmp: Path, detail: dict) -> list[Part]:
     table = from_pxweb(Path(path)) if token == "PXWEB" else from_px(Path(path))
     if not table["variables"]:
         raise EngineError("px-without-variables")
-    return [build_part(table)]
+    return [build_part(table, sample_size(cfg))]

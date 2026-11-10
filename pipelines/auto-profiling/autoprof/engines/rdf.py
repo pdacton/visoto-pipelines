@@ -10,7 +10,7 @@ from pathlib import Path
 import rdflib
 from rdflib import RDF, SH, Literal, URIRef
 
-from ..model import CATEGORICAL_MAX, Field, Part, truncate_examples, unique_slugs
+from ..model import CATEGORICAL_MAX, VALUE_SAMPLE, Field, Part, sample_size, truncate_examples, unique_slugs, value_sample
 from . import EngineError
 
 FORMATS = {"RDF_TURTLE": "turtle", "N3": "n3", "NT": "nt", "RDF_XML": "xml", "JSON_LD": "json-ld"}
@@ -68,7 +68,7 @@ def local_name(iri: str) -> str:
     return iri.rstrip("/#").rsplit("#", 1)[-1].rsplit("/", 1)[-1] or iri
 
 
-def class_part(g: rdflib.Graph, shapes: rdflib.Graph, shape, cls: URIRef) -> Part:
+def class_part(g: rdflib.Graph, shapes: rdflib.Graph, shape, cls: URIRef, n_sample: int = VALUE_SAMPLE) -> Part:
     instances = set(g.subjects(RDF.type, cls))
     n = len(instances)
     part = Part(label=local_name(str(cls)), targetClass=str(cls), rowCount=n)
@@ -85,18 +85,18 @@ def class_part(g: rdflib.Graph, shapes: rdflib.Graph, shape, cls: URIRef) -> Par
         f.minCount = int(mn) if mn is not None else 0
         f.maxCount = int(mx) if mx is not None else None
         f.type = XSD_TO_TS.get(str(datatype).removeprefix(XSD), "any") if datatype else "any"
-        observe(g, instances, path, f)
+        observe(g, instances, path, f, n_sample)
         part.fields.append(f)
     # sheXer drops properties below its threshold; keep every property the sample uses.
     seen = {f.path for f in part.fields}
     for p in sorted({str(p) for s in instances for p in g.predicates(s)} - seen - {str(RDF.type)}):
         f = Field(name=local_name(p), path=p, minCount=0)
-        observe(g, instances, URIRef(p), f)
+        observe(g, instances, URIRef(p), f, n_sample)
         part.fields.append(f)
     return part
 
 
-def observe(g: rdflib.Graph, instances: set, path: URIRef, f: Field) -> None:
+def observe(g: rdflib.Graph, instances: set, path: URIRef, f: Field, n_sample: int = VALUE_SAMPLE) -> None:
     values, using, max_per = [], 0, 0
     for s in instances:
         objs = list(g.objects(s, path))
@@ -120,6 +120,7 @@ def observe(g: rdflib.Graph, instances: set, path: URIRef, f: Field) -> None:
         f.categorical = True
         f.stats["values"] = sorted(counter)
     f.examples = truncate_examples(str(v) for v in values)
+    f.sample = value_sample((str(v) for v in values if not isinstance(v, rdflib.BNode)), n_sample)
     if not f.nodeKind and values:
         kinds = {("Literal" if isinstance(v, Literal) else "BlankNode" if isinstance(v, rdflib.BNode) else "IRI")
                  for v in values}
@@ -154,7 +155,7 @@ def profile(path: Path, token: str, cfg, tmp: Path, detail: dict) -> list[Part]:
         shape = by_class.get(cls)
         if shape is None:
             shape = rdflib.BNode()      # no sheXer shape: observe the properties only
-        parts.append(class_part(g, shapes, shape, cls))
+        parts.append(class_part(g, shapes, shape, cls, sample_size(cfg)))
     for part, s in zip(parts, unique_slugs([p.label for p in parts])):
         part.slug = s if len(parts) > 1 else "main"
     return parts

@@ -1,11 +1,8 @@
 # Open questions
 
-- **`BASE_IRI` for production:** decided 2026-11-10:
-  `https://register.ld.admin.ch/mds/` (see
-  [concept-matching](../concept-matching/01-purpose.md)); not yet applied.
-- **`prof:` vocabulary:** whether a small custom vocabulary is acceptable
-  long-term, or whether the statistics should map to DQV or an existing
-  profiling vocabulary.
+- **Statistics vocabulary:** the output uses `ap:` (metadata-swiss) since
+  2026-11-10. Whether the observation statistics should also map to DQV or
+  another profiling vocabulary is still open.
 - **Equivalence groups:** treating Opendatasoft exports of one dataset as one
   structure is a heuristic, based on the same dataset and the same export base
   path. Check that it never merges genuinely different tables.

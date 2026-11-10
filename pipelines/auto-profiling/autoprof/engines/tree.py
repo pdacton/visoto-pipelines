@@ -13,7 +13,7 @@ from pathlib import Path
 from genson import SchemaBuilder
 from lxml import etree
 
-from ..model import CATEGORICAL_MAX, Field, Part, truncate_examples
+from ..model import CATEGORICAL_MAX, VALUE_SAMPLE, Field, Part, sample_size, truncate_examples, value_sample
 from . import EngineError
 
 MAX_DEPTH = 6
@@ -81,7 +81,7 @@ def infer_type(values: list) -> tuple[str, str | None]:
     return "string", None
 
 
-def leaf_stats(f: Field, st: Stats, parents: int) -> None:
+def leaf_stats(f: Field, st: Stats, parents: int, n_sample: int = VALUE_SAMPLE) -> None:
     vals = st.values
     total = st.present + st.nulls if st.max_occurs <= 1 else len(vals) + st.nulls
     counter = Counter(str(v) for v in vals)
@@ -99,6 +99,7 @@ def leaf_stats(f: Field, st: Stats, parents: int) -> None:
         f.categorical = True
         f.stats["values"] = sorted(counter)
     f.examples = truncate_examples(vals)
+    f.sample = value_sample(vals, n_sample)
 
 
 def _n(x: float):
@@ -123,7 +124,8 @@ def json_paths(value, pointer: str, stats: dict, depth: int):
                 json_paths(x, p, stats, depth + 1)
 
 
-def json_part(schema: dict, pointer: str, stats: dict, parents: int, depth: int, label: str | None) -> Part:
+def json_part(schema: dict, pointer: str, stats: dict, parents: int, depth: int, label: str | None,
+              n_sample: int = VALUE_SAMPLE) -> Part:
     part = Part(label=label)
     required = set(schema.get("required", []))
     for order, (name, sub) in enumerate(list(schema.get("properties", {}).items())[:MAX_PROPS]):
@@ -138,7 +140,9 @@ def json_part(schema: dict, pointer: str, stats: dict, parents: int, depth: int,
         f.maxCount = None if is_array else 1
         if "object" in item_types and depth < MAX_DEPTH:
             f.type = "object"
-            f.node = json_part(item, p, stats, max(st.objects, 1), depth + 1, name)
+            f.node = json_part(item, p, stats, max(st.objects, 1), depth + 1, name, n_sample)
+            if not f.node.fields:          # only empty objects in the sample: no container without slots
+                f.node = None
             f.stats = {"count": parents, "nullPercentage": round(100 * (1 - st.present / parents), 2)
                        if parents else 0}
         elif len(item_types) == 1 or item_types <= {"integer", "number"}:
@@ -148,10 +152,10 @@ def json_part(schema: dict, pointer: str, stats: dict, parents: int, depth: int,
                 f.type, f.format = infer_type([str(v) for v in st.values])
                 if f.type in ("integer", "number", "boolean"):
                     f.type = "string"           # quoted numbers stay strings in JSON
-            leaf_stats(f, st, parents)
+            leaf_stats(f, st, parents, n_sample)
         else:
             f.type = "any"
-            leaf_stats(f, st, parents)
+            leaf_stats(f, st, parents, n_sample)
         if is_array:
             f.stats["maxItems"] = st.max_occurs
         part.fields.append(f)
@@ -184,7 +188,7 @@ def profile_json(path: Path, cfg) -> list[Part]:
     stats = {}
     for r in records:
         json_paths(r, "", stats, 1)
-    part = json_part(schema, "", stats, len(records), 1, None)
+    part = json_part(schema, "", stats, len(records), 1, None, sample_size(cfg))
     part.rowCount = len(records)
     if isinstance(data, list):
         part.dialect = {"recordsPath": "/"}
@@ -230,13 +234,13 @@ def xml_walk(el, node: XNode, depth: int):
                 xml_walk(e, child, depth + 1)
 
 
-def xml_part(node: XNode, xsd_types: dict, label: str) -> Part:
+def xml_part(node: XNode, xsd_types: dict, label: str, n_sample: int = VALUE_SAMPLE) -> Part:
     part = Part(label=label)
     fields = []
     for name, st in node.attrs.items():
         f = Field(name=f"@{name}", minCount=1 if st.present >= node.instances else 0, maxCount=1)
         f.type, f.format = infer_type(st.values)
-        leaf_stats(f, st, node.instances)
+        leaf_stats(f, st, node.instances, n_sample)
         fields.append(f)
     for name, child in node.children.items():
         st = node.child_stats[name]
@@ -244,17 +248,17 @@ def xml_part(node: XNode, xsd_types: dict, label: str) -> Part:
                   maxCount=1 if st.max_occurs <= 1 else None)
         if child.has_children:
             f.type = "object"
-            f.node = xml_part(child, xsd_types, name)
+            f.node = xml_part(child, xsd_types, name, n_sample)
             f.stats = {"count": node.instances, "nullPercentage": round(100 * (1 - st.present / node.instances), 2)}
         else:
             if child.attrs:              # a leaf with attributes is still a node
-                f.node = xml_part(child, xsd_types, name)
+                f.node = xml_part(child, xsd_types, name, n_sample)
             xsd = xsd_types.get(name)
             if xsd:
                 f.type = xsd
             else:
                 f.type, f.format = infer_type(st.values)
-            leaf_stats(f, st, node.instances)
+            leaf_stats(f, st, node.instances, n_sample)
         if st.max_occurs > 1:
             f.stats["maxItems"] = st.max_occurs
         fields.append(f)
@@ -296,7 +300,7 @@ def profile_xml(path: Path, cfg, detail: dict) -> list[Part]:
     node = XNode(local(root.tag), ns)
     xml_walk(root, node, 1)
     xsd = Path(str(path) + ".xsd")
-    part = xml_part(node, xsd_simple_types(xsd if xsd.exists() else None), local(root.tag))
+    part = xml_part(node, xsd_simple_types(xsd if xsd.exists() else None), local(root.tag), sample_size(cfg))
     part.rowCount = 1
     return [part]
 

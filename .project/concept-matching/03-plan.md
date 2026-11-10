@@ -16,45 +16,75 @@ every slot to it.
 
 Vocabulary (`metadata-swiss/mds-datamodel/ontology/`):
 
-- [ ] Move the namespaces: `ap:` → `https://register.ld.admin.ch/mds/ontology/ap/`,
+- [x] Move the namespaces: `ap:` → `https://register.ld.admin.ch/mds/ontology/ap/`,
   `mdr:` → `https://register.ld.admin.ch/mds/ontology/metadataregistry/`, in
   `autoprofiling/`, `dataelement/`, README and examples, and the `mdr:` prefix
   in visoto's `visoto.config` and `visoto.config.example`.
-- [ ] Apply the [vocabulary changes](02-model.md#vocabulary-changes-metadata-swiss)
+- [x] Apply the [vocabulary changes](02-model.md#vocabulary-changes-metadata-swiss)
   and commit the `ap:` draft.
-- [ ] Example in `autoprofiling/examples/`: two slots of different datasets
+- [x] Example in `autoprofiling/examples/`: two slots of different datasets
   linked to the same value domain and concept, with candidate, match and
   shortcut triples.
 
 Auto-profiling (`pipelines/auto-profiling/`):
 
-- [ ] Finish the open phase 9 item: verify an import into visoto-qlever, and
+- [x] Finish the open phase 9 item: verify an import into visoto-qlever, and
   settle whether the upload replaces or appends to a graph (pipeline graphs
   must be replaced; the confirmations graph must never be touched).
-- [ ] Migrate from `prof:` to `ap:` (mapping table in `autoprofiling/README.md`).
+- [x] Migrate from `prof:` to `ap:` (mapping table in `autoprofiling/README.md`).
   **Scope:** rename terms; type containers, slots and observations
   (`ap:Container`, `ap:Slot`, `ap:Observation`); move `csvw:dialect` and the
   records path to `rml:LogicalSource` with `ap:container` and `ap:tableName`.
   Not in scope: triples maps, sentinels, functional dependencies,
   `ap:pattern`, `ap:valueHistogram`. No visoto template or script uses
   `prof:`, so nothing breaks there.
-- [ ] Rewrite `.project/auto-profiling/02-model.md` for `ap:` and the new IRIs;
+- [x] Rewrite `.project/auto-profiling/02-model.md` for `ap:` and the new IRIs;
   update golden-file tests.
-- [ ] Set `BASE_IRI` to `https://register.ld.admin.ch/mds/`. IRIs stay derived
+- [x] Set `BASE_IRI` to `https://register.ld.admin.ch/mds/`. IRIs stay derived
   from the representative distribution; they may change between runs (see
   [02-model.md](02-model.md#iri-stability)).
-- [ ] **Value sample per slot, collected in the `profile` stage** (the engines
+- [x] **Value sample per slot, collected in the `profile` stage** (the engines
   hold the sample; `emit` does not), also for slots with more than 50 distinct
   values (6,931 slots had none in the last run). `sh:in` stays limited to 50
   values. Rerunnable offline from the cached samples (`--skip-fetch`).
-- [ ] `emit` writes `out/slots.jsonl`, this pipeline's input: per slot its
+- [x] `emit` writes `out/slots.jsonl`, this pipeline's input: per slot its
   IRI, the [re-attach key](02-model.md#iri-stability), name, label, container
   and neighbouring slot names, datatype, unit, format, geometry type and
   coordinate reference system, min/max, distinct count, the value sample and
   the [fingerprint](02-model.md#fingerprints). Not part of the graph.
-- [ ] Size check before any full run: about 11M triples for all ~35,500
+- [x] Size check before any full run: about 11M triples for all ~35,500
   distributions (1M for 3,293 in the last run), against visoto-qlever's
   memory.
+
+### Phase 0 results (2026-11-10)
+
+Branches, committed, not pushed: `feat/mds-namespaces-concept-matching`
+(metadata-swiss/mds-datamodel), `feat/ap-vocabulary` (this repo),
+`chore/mdr-prefix-mds` (visoto). The 500-dataset run was re-profiled offline
+with the new code (`--skip-fetch`).
+
+- **Import:** the upload modal appends (Graph Store POST). Pipeline graphs are
+  replaced by deleting the graph first or by a Graph Store PUT (QLever
+  supports it); both act on one named graph, so the confirmations graph is
+  never touched. Details in
+  [auto-profiling/01-purpose.md](../auto-profiling/01-purpose.md#import-into-visoto).
+- **Size:** 1.11M triples and 84 MB Turtle for 3,293 distributions; a full
+  run extrapolates to ~12M triples and ~900 MB. That exceeds the upload limit
+  (200 MB) and, as delta triples (~460 bytes each), would take ~5.5 GB of
+  visoto-qlever's memory. **A full run needs another load path** (index
+  rebuild or split graphs); decide before running it.
+- **Slots:** 29,645 in `slots.jsonl` (29,126 leaves; 1,440 geometries).
+  Every slot with more than 50 distinct values now has a sample (6,984).
+  3,859 non-geometry leaves have none: 2,850 all null, 715 in empty layers,
+  189 object or array values, 105 without statistics (Parquet footer, GDAL
+  fallback).
+- **Fingerprints:** 12,185 distinct (name, datatype, sample of up to 200
+  values). The 8,761 of the review used a different definition; the new one
+  splits more because the larger sample tells more columns apart.
+- **Re-attach keys:** 8 keys are shared by two slots (the same source name
+  twice in one container). Phase 2 must report them as ambiguous.
+- `ap:mainObjectClass` now points to an `mdr:ObjectClass`; the three older
+  `ap:` examples were changed accordingly.
 
 ## Phase 1: Registry seed
 

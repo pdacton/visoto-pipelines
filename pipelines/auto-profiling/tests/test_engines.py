@@ -156,3 +156,11 @@ def test_tree_xml_types_from_xsd(cfg, tmp_path):
     data = next(f for f in part.fields if f.name == "data")
     inner = {f.name: f for f in data.node.fields}
     assert inner["anzahl"].type == "number"        # the XSD wins over the inferred integer
+
+
+def test_empty_objects_give_no_nested_container(cfg, tmp_path):
+    src = tmp_path / "empty.json"
+    src.write_text('[{"id": 1, "summaries": {}}, {"id": 2, "summaries": {}}]')
+    [part] = tree.profile(src, "JSON", cfg, tmp_path, {})
+    f = next(f for f in part.fields if f.name == "summaries")
+    assert f.type == "object" and f.node is None

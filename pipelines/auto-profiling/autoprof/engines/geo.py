@@ -9,7 +9,7 @@ from pathlib import Path
 
 import duckdb
 
-from ..model import Field, Part, unique_slugs
+from ..model import Field, Part, sample_size, unique_slugs
 from . import EngineError
 from .tabular import SYSTEM_TABLES, connect, keys_unique, lit, profile_relation, q
 
@@ -30,6 +30,7 @@ def layers_of(path: str, token: str, detail: dict) -> list[tuple[str | None, str
 
 def profile(path: Path, token: str, cfg, tmp: Path, detail: dict) -> list[Part]:
     rows = cfg.int("SAMPLE_ROWS")
+    n = sample_size(cfg)
     con = connect(tmp / "duckdb")
     con.execute("LOAD spatial")
     parts = []
@@ -44,7 +45,8 @@ def profile(path: Path, token: str, cfg, tmp: Path, detail: dict) -> list[Part]:
             for layer in layers:
                 if SYSTEM_TABLES.match(layer["name"]):
                     continue
-                parts.append(layer_part(con, file, layer, label or layer["name"], rows, single=len(layers) == 1))
+                parts.append(layer_part(con, file, layer, label or layer["name"], rows, single=len(layers) == 1,
+                                        n_sample=n))
     finally:
         con.close()
     if not parts:
@@ -54,22 +56,22 @@ def profile(path: Path, token: str, cfg, tmp: Path, detail: dict) -> list[Part]:
     return parts
 
 
-def layer_part(con, file: str, layer: dict, label: str, rows: int, single: bool) -> Part:
+def layer_part(con, file: str, layer: dict, label: str, rows: int, single: bool, n_sample: int = 0) -> Part:
     source = f"ST_Read({lit(file)}, layer={lit(layer['name'])})" if not single else f"ST_Read({lit(file)})"
     geoms = layer.get("geometry_fields") or []
     try:
         try:
-            fields, n = profile_relation(con, source, rows)
+            fields, n = profile_relation(con, source, rows, n_sample=n_sample)
         except duckdb.Error as e:
             if "unicode" not in str(e).lower():
                 raise
             # A shapefile in Latin-1 without a .cpg file: GDAL hands DuckDB invalid UTF-8.
             source = source[:-1] + ", open_options=['ENCODING=ISO-8859-1'])"
-            fields, n = profile_relation(con, source, rows)
+            fields, n = profile_relation(con, source, rows, n_sample=n_sample)
     except duckdb.Error:
         # Curves and other geometry types DuckDB can't convert: read the geometry as raw WKB.
         try:
-            fields, n = profile_relation(con, source[:-1] + ", keep_wkb=true)", rows)
+            fields, n = profile_relation(con, source[:-1] + ", keep_wkb=true)", rows, n_sample=n_sample)
         except duckdb.Error as e:
             return fallback(file, label, str(e), layer=layer["name"])[0]
         names = {g["name"] for g in geoms} | {"geom", "wkb_geometry", "geometry"}
@@ -80,8 +82,9 @@ def layer_part(con, file: str, layer: dict, label: str, rows: int, single: bool)
     for f in geom_cols:
         f.datatype = GEO_WKT
         f.stats = {k: v for k, v in f.stats.items() if k in ("count", "nullPercentage")}
+        f.sample = []
     fields = [f for f in fields if f.name != "OGC_FID"]      # added by ST_Read for shapefiles
-    part = Part(label=label, fields=fields)
+    part = Part(label=label, fields=fields, tableName=layer["name"])
     count = layer.get("feature_count")
     part.rowCount = count if count is not None and count >= 0 else n
     if geoms:
@@ -147,7 +150,7 @@ def fallback(file: str, label: str | None, error: str, layer: str | None = None)
         if info.get("geometry_type"):
             fields.append(Field(name=geom_column, type="geojson", datatype=GEO_WKT))
         crs = info.get("crs") or ""
-        parts.append(Part(label=label or name, rowCount=info.get("features"), fields=fields,
+        parts.append(Part(label=label or name, rowCount=info.get("features"), fields=fields, tableName=name,
                           geometryType=geometry_name(info.get("geometry_type")),
                           crs=crs.split(":")[1] if crs.upper().startswith("EPSG:") else srs_from_file(file)))
     return parts

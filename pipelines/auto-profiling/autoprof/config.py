@@ -10,7 +10,7 @@ DEFAULTS = {
     "NAME": "auto-profiling",
     "GRAPH": "urn:data:auto-profiling-githubpipeline",
     "ODS_ENDPOINT": "https://trifid.abn.ods.zazukoians.org/query",
-    "BASE_IRI": "https://example.org/auto-profiling/",
+    "BASE_IRI": "https://register.ld.admin.ch/mds/",
     "SAMPLE_ROWS": "10000",
     "MAX_DOWNLOAD_MB": "50",
     "CONCURRENCY": "8",
@@ -21,6 +21,8 @@ DEFAULTS = {
     "WFS_FEATURES": "1000",
     "FETCH_DEADLINE": "300",
     "PROFILE_TIMEOUT": "300",
+    "VALUE_SAMPLE": "200",
+    "SHAPES": "shapes.ttl",
 }
 
 
