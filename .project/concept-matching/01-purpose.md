@@ -1,59 +1,110 @@
 # Purpose
 
-Propose, for every profiled slot, which registered meaning and representation
-it carries, so a reviewer can confirm matches and visoto can show "this column
-holds canton codes (I14Y `DV_KT_BEZ_GDE_SNAP`, version 2024.1.0)".
+Build a metadata registry in the knowledge graph, so that datasets can be
+compared and similar ones found:
+
+- **technically interoperable:** their slots share a value domain (the same
+  code list, or the same datatype, unit and format);
+- **semantically interoperable:** their slots share a data element concept
+  (the same object class and property);
+- **both:** their slots share a data element.
+
+The registry is extracted bottom-up from the data. Each slot (column, field)
+of an auto-profiled structure is linked on its own to a registry entry, found
+or newly created. Slots of different datasets that end up at the same entry
+form the clusters; there is no grouping step.
+
+The pipeline only **establishes the connections**. Finding similar datasets
+is a SPARQL query on the knowledge graph, not part of the pipeline.
 
 Status: **design** (2026-11-10).
 
 ## Decisions (2026-11-10)
 
-- **Three target types.** A candidate or match points to an
-  `mdr:DataElementConcept` (meaning), an `mdr:ValueDomain` (representation) or
-  an `mdr:DataElement` (both). The class of the target says which aspect was
-  matched; there is no separate aspect property. Evidence often supports only
-  one side: a column of canton codes is a sure value domain match while its
-  meaning (residence? workplace?) stays open.
-- **Value domains dominate.** Code-list overlap is the strongest evidence and
-  the best-populated source. Data element concepts are the weakest target
-  type: no source splits concepts into object class and property.
-- **Container level.** A container gets candidates and matches for an
-  `mdr:ObjectClass`, replacing the direct `ap:mainObjectClass` → `rdfs:Class`
-  link.
-- **Confirmed matches shape the slot.** A value domain match sets the slot's
-  `sh:node`; a data element concept match sets its `sh:path` to the concept's
-  ontology property. Both together make the slot a use of the data element
-  (cardinality stays on the slot); if no such data element exists, confirming
-  creates one, so the registry grows from profiling.
-- **Code lists are wrapped, not copied.** Each LINDAS concept scheme gets an
-  `mdr:ValueDomain` whose `mdr:permissibleValues` is the LINDAS scheme IRI.
-  The 509k terms stay on LINDAS: visoto-qlever has too little memory, and
-  LINDAS stays the single source of truth. The matcher queries LINDAS directly.
-- **Separate pipeline.** The matcher is its own pipeline with its own graph,
-  run after auto-profiling, so profiling runs on its own and a matcher rerun
-  never reprofiles. It reads auto-profiling's profiles and points at its slot
-  IRIs.
-- **IRIs.** Data under `https://register.ld.admin.ch/mds/`, as the existing
-  MDS data (`…/mds/agent/`, `…/mds/dataset/`). Vocabularies under
-  `https://register.ld.admin.ch/mds/ontology/`: `ap:` moves to
-  `…/mds/ontology/ap/`, `mdr:` to `…/mds/ontology/metadataregistry/`
-  (from `…/i14y/ontology/…`).
-- **Test data only.** The 657 I14Y structure property shapes on LINDAS with
-  `dct:conformsTo` an I14Y concept evaluate the matcher. They are not imported
-  as seed data elements.
+Registry:
+
+- **Three kinds of entry a slot links to.** An `mdr:ValueDomain`
+  (representation), an `mdr:DataElementConcept` (meaning: object class plus
+  property), and an `mdr:DataElement` (the pair of both). Evidence often
+  supports only one side: a column of canton codes surely has the canton value
+  domain while its meaning (residence? workplace?) is a separate question.
+- **Code lists are wrapped, not copied.** Each LINDAS code list gets a value
+  domain for the list and one per version beneath it, pointing at the LINDAS
+  IRIs. The 509k codes stay on LINDAS and are not loaded into visoto-qlever
+  (too little memory). For matching, the pipeline keeps the codes in a local
+  DuckDB file in its cache.
+- **List and versions.** A slot links to the most specific entry its values
+  support. Two datasets on different versions of the same list still meet at
+  the list entry.
+- **Value domains for everything else are made by rule,** without an LLM:
+  datatype plus unit plus format; for geometries, geometry type plus
+  coordinate reference system; for identifiers, the validator that recognises
+  them (AHV number, UID, EGID).
+- **Concepts come from the data.** For each slot, existing entries are looked
+  up (embeddings), and an LLM decides whether one of them fits or a new one
+  is created. Nothing is imported from I14Y; where an I14Y concept
+  corresponds, it is linked with `skos:closeMatch`.
+- **Concepts are specific and follow ISO/IEC 11179.** A data element concept
+  is exactly one object class plus one property. The object class is the
+  kind of thing the record describes (Person), the property its
+  characteristic (municipality of residence). The LLM finds or creates the
+  object class and the property, each on its own; the data element concept is
+  the pair of the two and is created by rule. "Municipality of residence" and
+  "municipality of work" are therefore different concepts. Coarser similarity
+  needs no coarser concepts: it comes from the parts two slots share (the
+  object class, the property, or the value domain).
+- **Duplicates are accepted.** The lookup "does this concept already exist?"
+  is the critical step, and it will miss sometimes. Duplicate concepts are
+  merged later by a separate pruning process in the knowledge graph.
+- **The registry is state, not output.** Created entries must keep their IRIs
+  across runs, so they are stored as files in the repo
+  (`pipelines/concept-matching/registry/`) and published from there.
+
+Links:
+
+- **Proposal, accepted link, shortcut.** An `ap:Candidate` is a scored
+  proposal with its evidence. An `ap:Match` is an accepted link, attributed
+  to a person or to the run that accepted it automatically. Every match also
+  gives a direct triple on the slot (`ap:valueDomain`,
+  `ap:dataElementConcept`, `ap:dataElement`), so comparison queries stay
+  short.
+- **The slot's shape is never changed.** Links are extra triples about the
+  slot in the concept-matching graph; the slot keeps describing the source
+  data.
+- **Work per fingerprint.** Slots with the same name, datatype and values are
+  processed once and the result applies to all of them (27,677 slots but
+  8,761 fingerprints in the last 500-dataset run). A full run has about 300k
+  slots, so automatic acceptance above a threshold is required.
+- **Confirmations.** A person's confirmations go into visoto-qlever in their
+  own named graph. Until a review UI exists they are entered in
+  `confirmations.csv` in the repo and uploaded from there. Slot IRIs may
+  change between runs; confirmations carry a key to be re-attached.
+- **Quality is measured** on hand-labelled slots (the gold set).
+
+Setup:
+
+- **Separate pipeline,** run after auto-profiling, so profiling runs on its
+  own and a rerun here never reprofiles.
+- **IRIs.** Data under `https://register.ld.admin.ch/mds/`. Vocabularies under
+  `https://register.ld.admin.ch/mds/ontology/`: `ap:` at `…/ap/`, `mdr:` at
+  `…/metadataregistry/` (moved from `…/i14y/ontology/…`).
 
 ## Sources
 
 | Source | Gives | Notes |
 |---|---|---|
-| LINDAS graph `https://lindas.admin.ch/fso/i14y` | 728 versioned `skos:ConceptScheme`s (≈340 concepts), 509k `skos:Concept`s with `skos:notation`, xkos levels, version links | Code lists only (checked 2026-11-10) |
-| I14Y API `https://api.i14y.admin.ch/api/public/v1` | Concepts that are not code lists: string, date, numeric with constraints | Only source for described value domains |
-| LINDAS, same graph | 8,173 dataset-structure property shapes, 657 with `dct:conformsTo` a concept | Test data |
+| auto-profiling (`out/slots.jsonl`) | Slots with names, datatypes, statistics and value samples | The data the registry is extracted from |
+| LINDAS graph `https://lindas.admin.ch/fso/i14y` | 728 versioned code lists (about 340 lists), 509k codes with `skos:notation` and xkos levels | Wrapped as value domains |
 
 ## Scope
 
-In: candidates for slots and containers, scoring with recorded evidence,
-the value domain wrappers, evaluation against the test data.
+In: the registry (value domains, data element concepts, object classes,
+properties, data elements), links from slots to its entries with recorded
+evidence, the interim confirmations file, the gold set, re-attaching
+confirmations after reruns.
 
-Out: a review UI for confirming matches (visoto, later), creating data element
-concepts, matching against non-I14Y vocabularies.
+Later: merging duplicate entries (pruning), a review UI in visoto, converting
+datasets to RDF (RML, target shapes, validation of the converted data).
+
+Not planned: similarity search as a pipeline step (it is a SPARQL query),
+importing I14Y concepts, publishing to I14Y or OpenMetadata.

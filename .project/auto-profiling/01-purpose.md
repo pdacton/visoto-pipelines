@@ -71,7 +71,8 @@ Out of scope for now:
 - HTML, PDF, WMS/WMTS, images, code and documents.
 - GeoJSON. JSON distributions that turn out to be GeoJSON are recorded as
   skipped.
-- Linking values to LINDAS shared dimensions or I14Y concepts.
+- Linking values to LINDAS shared dimensions or I14Y concepts: done in the
+  separate [concept-matching](../concept-matching/) pipeline.
 
 ## Runs on
 
