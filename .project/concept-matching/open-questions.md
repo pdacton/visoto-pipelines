@@ -1,9 +1,5 @@
 # Open questions
 
-- **Where the matcher lives:** a new `concept-matching` pipeline with its own
-  graph, reading auto-profiling's `out/profiles/*.json` and pointing at its
-  slot IRIs (reruns independent of profiling), or a stage inside
-  auto-profiling. Leaning towards a separate pipeline.
 - **Scoring thresholds:** minimum containment and how coverage weighs in;
   set after the phase 2 test set exists.
 - **Identity vs version:** LINDAS lists terms under both the version and the

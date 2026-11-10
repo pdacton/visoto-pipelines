@@ -5,10 +5,21 @@ the dominant case; phases 4–5 add the weaker evidence.
 
 ## Phase 0: Vocabulary
 
+- [ ] Move the namespaces: `ap:` → `https://register.ld.admin.ch/mds/ontology/ap/`,
+  `mdr:` → `https://register.ld.admin.ch/mds/ontology/metadataregistry/`, in
+  `metadata-swiss/mds-datamodel/ontology/` (`autoprofiling/`, `dataelement/`,
+  README, examples) and the `mdr:` prefix in visoto's `visoto.config` and
+  `visoto.config.example`.
 - [ ] Apply the [vocabulary changes](02-model.md#vocabulary-changes-metadata-swiss)
   in `metadata-swiss/mds-datamodel/ontology/` and commit the `ap:` draft.
 - [ ] Example: one slot with a code-overlap candidate and a confirmed match in
   `autoprofiling/examples/`.
+- [ ] Migrate auto-profiling from `prof:` to `ap:` (mapping table in
+  `autoprofiling/README.md`): containers and slots typed `ap:Container` /
+  `ap:Slot`, observations typed, `csvw:dialect` and records path moved to
+  `rml:LogicalSource`. Golden-file tests updated.
+- [ ] Set auto-profiling's `BASE_IRI` to `https://register.ld.admin.ch/mds/`
+  (structures, containers and slots below it).
 
 ## Phase 1: Value domain wrappers
 
@@ -33,6 +44,8 @@ schemes).
 
 ## Phase 3: Code-overlap matcher
 
+- [ ] New pipeline `pipelines/concept-matching/` with its own graph
+  (`urn:data:concept-matching-githubpipeline`), run after auto-profiling.
 - [ ] Input: auto-profiling profiles (categorical slots and their distinct
   values).
 - [ ] Batched `VALUES` queries against LINDAS (`skos:notation`, grouped by

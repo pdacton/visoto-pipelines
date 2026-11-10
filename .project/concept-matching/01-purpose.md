@@ -29,6 +29,15 @@ Status: **design** (2026-11-10).
   `mdr:ValueDomain` whose `mdr:permissibleValues` is the LINDAS scheme IRI.
   The 509k terms stay on LINDAS: visoto-qlever has too little memory, and
   LINDAS stays the single source of truth. The matcher queries LINDAS directly.
+- **Separate pipeline.** The matcher is its own pipeline with its own graph,
+  run after auto-profiling, so profiling runs on its own and a matcher rerun
+  never reprofiles. It reads auto-profiling's profiles and points at its slot
+  IRIs.
+- **IRIs.** Data under `https://register.ld.admin.ch/mds/`, as the existing
+  MDS data (`…/mds/agent/`, `…/mds/dataset/`). Vocabularies under
+  `https://register.ld.admin.ch/mds/ontology/`: `ap:` moves to
+  `…/mds/ontology/ap/`, `mdr:` to `…/mds/ontology/metadataregistry/`
+  (from `…/i14y/ontology/…`).
 - **Test data only.** The 657 I14Y structure property shapes on LINDAS with
   `dct:conformsTo` an I14Y concept evaluate the matcher. They are not imported
   as seed data elements.
