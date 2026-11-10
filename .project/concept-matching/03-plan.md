@@ -86,6 +86,20 @@ with the new code (`--skip-fetch`).
 - `ap:mainObjectClass` now points to an `mdr:ObjectClass`; the three older
   `ap:` examples were changed accordingly.
 
+### Working set: 100-dataset sample (2026-11-10)
+
+Phases 1–3 run on `pipelines/auto-profiling/datasets-sample.txt`, 100
+datasets drawn from the 500 by `uv run python -m autoprof sample` (rules in
+`autoprof/sample.py`): only datasets with a profiled structure and at most
+300 slots, at most 5 per publisher host, a minimum number of datasets per
+concept-matching case (municipality codes 10, canton codes 6, labels instead
+of codes 6, identifiers 6, small-integer codes 10) and per engine (tabular 35,
+geo 30, PX 15, RDF 10, tree 10), the rest in hash order. Run it with
+`DATASETS=datasets-sample.txt scripts/run.sh auto-profiling`. The gold sets
+are drawn from it. The selection reads the output of a 500-dataset run; a
+copy of that run's profiles and `slots.jsonl` is kept in
+`pipelines/auto-profiling/cache/run-500/` (not in git).
+
 ## Phase 1: Registry seed
 
 New pipeline `pipelines/concept-matching/`, stage `registry`.
@@ -137,7 +151,7 @@ Stage `link-values`, run after auto-profiling. No LLM.
 
 Done when the comparison query in
 [02-model.md](02-model.md#what-the-links-make-possible) returns technically
-comparable datasets on the 500-dataset run, and a match in
+comparable datasets on the 100-dataset sample, and a match in
 `confirmations.csv` survives an auto-profiling rerun that changes its slot's
 IRI.
 
@@ -169,7 +183,7 @@ Stage `link-concepts`. Steps as in
   on the pairs.
 
 Done when the comparison query with `ap:dataElementConcept` returns
-semantically comparable datasets on the 500-dataset run, and a second run
+semantically comparable datasets on the 100-dataset sample, and a second run
 creates no new entries for unchanged slots.
 
 ## Phase 4: Operation

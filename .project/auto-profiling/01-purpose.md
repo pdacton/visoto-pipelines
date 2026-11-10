@@ -15,6 +15,11 @@ line (`#` comments and blank lines ignored), e.g.
 https://opendata.swiss/set/data/00_01_liste_menages_collectifs_lhr-ssd
 ```
 
+Other lists: `datasets-large.txt` (500 datasets, phase 9) and
+`datasets-sample.txt` (a representative 100 of them, the working set of
+concept matching; made by `uv run python -m autoprof sample`). Choose one
+with `DATASETS=datasets-sample.txt scripts/run.sh auto-profiling`.
+
 The pipeline resolves each dataset's distributions itself, from the ODS ABN
 endpoint (`https://trifid.abn.ods.zazukoians.org/query`).
 

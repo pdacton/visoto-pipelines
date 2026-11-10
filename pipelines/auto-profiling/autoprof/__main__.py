@@ -1,10 +1,10 @@
-"""python -m autoprof {resolve,fetch,profile,emit,report}"""
+"""python -m autoprof {resolve,fetch,profile,emit,report,sample}"""
 import argparse
 import sys
 
 from .config import Config
 
-STAGES = ["resolve", "fetch", "profile", "emit", "report"]
+STAGES = ["resolve", "fetch", "profile", "emit", "report", "sample"]
 
 
 def main(argv=None) -> int:
@@ -25,6 +25,9 @@ def main(argv=None) -> int:
     elif args.stage == "emit":
         from . import emit
         emit.run(cfg)
+    elif args.stage == "sample":
+        from . import sample
+        sample.run(cfg)
     elif args.stage == "report":
         from . import report
         report.run(cfg)

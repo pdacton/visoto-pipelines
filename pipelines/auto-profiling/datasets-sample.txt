@@ -1,0 +1,124 @@
+# Representative sample of datasets-large.txt for concept matching, made by
+# `uv run python -m autoprof sample` from the 500-dataset run (rules in autoprof/sample.py).
+# 100 datasets, 4431 slots, 33 publisher hosts
+# engines: geo 42, px 15, rdf 24, tabular 54, tree 14
+# cases: municipality-code 11, canton-code 6, labels-not-codes 6, identifier 6, small-int-code 31
+# datasets sharing a column name with at least two others: 90
+
+# case:canton-code
+https://opendata.swiss/set/data/42ea37e6-8f72-426f-a7e3-b0c078573209
+https://opendata.swiss/set/data/6cd47f66-e60d-49ed-ac29-5123598b9c83
+https://opendata.swiss/set/data/c18d3fdd-4182-4349-a31c-a0f893bdf8bd
+https://opendata.swiss/set/data/e3bc31c1-6913-4211-8211-1a851e34d8fd
+https://opendata.swiss/set/data/e7267991-9ab6-46bf-918b-c003294d2256
+
+# case:identifier
+https://opendata.swiss/set/data/065ee43a-290c-42d7-8c6d-4f3a6560ea5f-stadt-zurich
+https://opendata.swiss/set/data/8b7b08aa-a5fc-4914-92bc-9ccb23cfa878-8371
+https://opendata.swiss/set/data/ef4fb9a9-d8dc-49b3-8bd9-2748c999a8a8-8371
+https://opendata.swiss/set/data/imad_bases_equipes
+
+# case:labels-not-codes
+https://opendata.swiss/set/data/1f87b298-3505-4bc9-8c28-90c527070a6a-kanton-zug
+https://opendata.swiss/set/data/22b0d59f-363c-4643-929b-8a06cddf7f75
+https://opendata.swiss/set/data/haltestelle-haltekante-schweizerische-bundesbahnen-sbb
+https://opendata.swiss/set/data/perron-schweizerische-bundesbahnen-sbb
+https://opendata.swiss/set/data/programme_analyses_srg-ssr_radios-bundesamt-fur-kommunikation-bakom
+https://opendata.swiss/set/data/tunnel-schweizerische-bundesbahnen-sbb
+
+# case:municipality-code
+https://opendata.swiss/set/data/18291ac9-d39e-403a-88bd-51acac95a5b0
+https://opendata.swiss/set/data/285019-bundesamt-fur-statistik-bfs
+https://opendata.swiss/set/data/5d67bca4-e9b3-4976-afd4-b21ce2214a22-kanton-zug
+https://opendata.swiss/set/data/cad_adresse_non_postale
+https://opendata.swiss/set/data/dbu-afu-23-kanton-thurgau
+https://opendata.swiss/set/data/eb138273-30d1-432c-8e0d-fe0cb1a45f99
+https://opendata.swiss/set/data/sk-stat-129-kanton-thurgau
+https://opendata.swiss/set/data/sk-stat-15-kanton-thurgau
+https://opendata.swiss/set/data/sk-stat-4-kanton-thurgau
+https://opendata.swiss/set/data/sk-stat-88-kanton-thurgau
+
+# engine:geo
+https://opendata.swiss/set/data/00a40413-aae8-403b-a9aa-8eeef111a90f-8371
+https://opendata.swiss/set/data/19c327e9-9ffe-49f5-9e52-c085df1af242-stadt-zurich
+https://opendata.swiss/set/data/29969c9f-d036-489a-b330-a9c68e5c8fb0-stadt-zurich
+https://opendata.swiss/set/data/5b31cc44-c9f2-4a66-b770-f0d2f37a629b-8371
+https://opendata.swiss/set/data/765dc6fe-1cd1-410f-a2c6-6e59deb5b1b5-stadt-zurich
+https://opendata.swiss/set/data/a4888920-54b5-475c-a0da-2b9f5425d2c8-stadt-zurich
+https://opendata.swiss/set/data/b3b125bf-3f39-4012-beb6-2ea653c13a86
+https://opendata.swiss/set/data/df243ca9-1cf4-4c84-a1f8-38001794d437-8371
+https://opendata.swiss/set/data/ec9e003e-f95e-49de-a7f6-9aee670db0b9
+https://opendata.swiss/set/data/f727eb90-ce71-4a05-b0ee-d8957b5bc560
+https://opendata.swiss/set/data/ffp_trame_noire
+https://opendata.swiss/set/data/rpu_nouvelle_nomenclature_p
+https://opendata.swiss/set/data/rpu_perimetre_validite
+https://opendata.swiss/set/data/rpu_vegetation_l_adopt
+
+# engine:px
+https://opendata.swiss/set/data/213-202d
+https://opendata.swiss/set/data/222-103
+https://opendata.swiss/set/data/26605239-bundesamt-fur-statistik-bfs
+https://opendata.swiss/set/data/26605385-bundesamt-fur-statistik-bfs
+https://opendata.swiss/set/data/36251694-bundesamt-fur-statistik-bfs
+https://opendata.swiss/set/data/36454412-bundesamt-fur-statistik-bfs
+https://opendata.swiss/set/data/36633730-bundesamt-fur-statistik-bfs
+https://opendata.swiss/set/data/36677239-bundesamt-fur-statistik-bfs
+https://opendata.swiss/set/data/36735099-bundesamt-fur-statistik-bfs
+https://opendata.swiss/set/data/36735101-bundesamt-fur-statistik-bfs
+https://opendata.swiss/set/data/36735127-bundesamt-fur-statistik-bfs
+https://opendata.swiss/set/data/421-001
+https://opendata.swiss/set/data/501-060
+https://opendata.swiss/set/data/552-303
+
+# engine:tabular
+https://opendata.swiss/set/data/05_03_reduction_primes-ssd
+https://opendata.swiss/set/data/07a30c15-509d-47b3-8d71-f0abc023eb4f
+https://opendata.swiss/set/data/0c8b00e7-edcd-4f1c-bf30-f8f9b192b49c-stadt-zug
+https://opendata.swiss/set/data/100049-kanton-basel-stadt
+https://opendata.swiss/set/data/100086-kanton-basel-stadt
+https://opendata.swiss/set/data/100120-kanton-basel-stadt
+https://opendata.swiss/set/data/100174-kanton-basel-stadt
+https://opendata.swiss/set/data/100278-kanton-basel-stadt
+https://opendata.swiss/set/data/12890-kanton-basel-landschaft
+https://opendata.swiss/set/data/8c6bfb17-4723-486f-8a69-d9a90a71b2ae-kanton-zug
+https://opendata.swiss/set/data/b1823c70-ece7-42fa-b42b-a8fb669a47f8-kanton-zug
+https://opendata.swiss/set/data/bazg_ix_cpa
+https://opendata.swiss/set/data/dienstleistungsuebersicht-stadt-stgallen-stadt-st-gallen
+https://opendata.swiss/set/data/f6b1b847-2333-4084-8073-9200b2865a6c
+https://opendata.swiss/set/data/ffp_ie_hexagone_25m
+https://opendata.swiss/set/data/fuellstandsensoren-glassammelstellen-braunglas-stadt-st-gallen
+https://opendata.swiss/set/data/pflegestunden-der-spitex-kanton-stgallen-kanton-st-gallen
+https://opendata.swiss/set/data/rpu_dp_adopt
+https://opendata.swiss/set/data/tpg_lignes_contact
+
+# engine:tree
+https://opendata.swiss/set/data/sdc_ch-organisation_iati
+
+# fill
+https://opendata.swiss/set/data/08d91185-d1ef-4546-81b1-8b5a757673b2
+https://opendata.swiss/set/data/09_04_constructions_terminees_trimestrielles_des_1978-ssd
+https://opendata.swiss/set/data/12570-kanton-basel-landschaft
+https://opendata.swiss/set/data/12750-kanton-basel-landschaft
+https://opendata.swiss/set/data/1a7cb8e4-d48a-4437-8ee4-b1003264fc1f-stadt-zurich
+https://opendata.swiss/set/data/260ee33d-54dd-4781-8370-387a55fdc463
+https://opendata.swiss/set/data/27d3fbe8-c646-433e-9a0c-69d1d435c697
+https://opendata.swiss/set/data/2999470f-b6c8-458f-b10d-a55d2d86abde
+https://opendata.swiss/set/data/2f93b0ed-165b-4e46-9c9a-d04011d40eeb
+https://opendata.swiss/set/data/40759c3e-534d-4d02-bfea-6a6e80bafc97
+https://opendata.swiss/set/data/41b09c52-e63b-4902-b724-0583c0ad2fd3
+https://opendata.swiss/set/data/5289c7ad-a02e-47ef-bd62-7bc65b2d78e3
+https://opendata.swiss/set/data/66f49a76-8a1e-43de-bf2d-9666b4c282dc-stadt-zurich
+https://opendata.swiss/set/data/693123e7-5966-4d4d-8797-9cd661f74d80
+https://opendata.swiss/set/data/ac730d03-1840-4f64-bc89-9f06d2491e25
+https://opendata.swiss/set/data/adb280a9-381d-4fb3-ae43-b40ace826dc7-stadt-zurich
+https://opendata.swiss/set/data/auskunfte-betreibungsregister-stadt-stgallen-stadt-st-gallen
+https://opendata.swiss/set/data/becd1615-471a-4db5-ac7c-13867beeca7e
+https://opendata.swiss/set/data/borreliose-abteilung-uebertragbare-krankheiten
+https://opendata.swiss/set/data/c2574a21-2def-4fd0-8529-a7bd2f6ddede
+https://opendata.swiss/set/data/c5f9bb50-d8cc-4a07-af21-a263aa250814-stadt-zurich
+https://opendata.swiss/set/data/f73922cc-f74c-4d55-a015-83dcfb0b6821-stadt-zurich
+https://opendata.swiss/set/data/fe2d08a9-f1b6-46f4-aeab-04759f7c5a9e
+https://opendata.swiss/set/data/monitoringmedexposition
+https://opendata.swiss/set/data/orthofoto-2021-stadt-stgallen-stadt-st-gallen
+https://opendata.swiss/set/data/veloabstellplatze-stadt-st-gallen
+https://opendata.swiss/set/data/wassertemperaturen_freibaeder-stadt-zurich
