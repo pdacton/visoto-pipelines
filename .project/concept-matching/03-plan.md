@@ -208,8 +208,9 @@ triples, valid.
 - **Phase 1:** 728 code-list value domains (339 lists, 389 versions) and 7 identifier value domains
   (AHV, UID, E-GRID, EGID, EWID, EDID, postcode) in `registry/valuedomains.jsonl`; 509,213 codes in
   `cache/codes.duckdb`, refreshed per list in 18 s. A wrapper whose scheme vanishes from LINDAS is
-  marked Deprecated, never removed. Not yet checked: loading into visoto-qlever and showing a value
-  domain in visoto.
+  marked Deprecated, never removed. Done criterion checked 2026-11-11 on a local visoto-qlever: the
+  graph loads (Graph Store PUT), visoto renders `…/mds/valuedomain/DV_KT_BEZ_GDE_SNAP` with its
+  `mdr:permissibleValues` link to LINDAS, and that value domain joins 16 slots of 8 datasets.
 - **Phase 2:** 22 automatic code-list links, 11 identifiers, 4,212 described value domains (33 rule
   value domains); 280 slots without (nested, no datatype). Two guards beyond the plan: levels that are
   dense integer ranges (AGE_HOURS 0–1200, MS regions) and value ranges where nearly every integer is a
