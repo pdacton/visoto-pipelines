@@ -35,6 +35,7 @@ KINDS = {  # file stem → (rdf class, IRI path segment)
     "dataelements": (MDR.DataElement, "dataelement"),
 }
 COMPLETED, CANDIDATE = "Completed", "UnderDevelopment"
+PROVENANCE = {"created", "generatedBy", "derivedFrom"}
 
 
 def today() -> str:
@@ -95,14 +96,15 @@ class Registry:
         return None
 
     def put(self, kind: str, entry: dict) -> dict:
-        """Add an entry, or update the fields of an existing one (its IRI and creation date stay)."""
+        """Add an entry, or update the fields of an existing one (its IRI and provenance stay)."""
         old = self.entries[kind].get(entry["iri"])
         if old is None:
             entry = {"created": today(), **entry}
             self.entries[kind][entry["iri"]] = entry
             self.changed.add(kind)
             return entry
-        merged = {**old, **{k: v for k, v in entry.items() if k != "created"}}
+        # provenance records the first creation: a later run never rewrites it
+        merged = {**old, **{k: v for k, v in entry.items() if k not in PROVENANCE}}
         if merged != old:
             self.entries[kind][entry["iri"]] = merged
             self.changed.add(kind)

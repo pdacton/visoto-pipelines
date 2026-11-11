@@ -143,3 +143,12 @@ def test_registry_keeps_iris_and_creation_date(tmp_path):
     e = again.get("objectclasses", iri)
     assert e["created"] == "2026-01-01" and e["title"]["en"] == "Natural person"
     assert opaque_id("objectclasses", "person", "fp") == opaque_id("objectclasses", "person", "fp")
+
+
+def test_registry_keeps_provenance_of_the_first_run(tmp_path):
+    reg = Registry(tmp_path, "https://example.org/mds/")
+    e = {"iri": "x:1", "id": "1", "title": {"en": "A"}, "generatedBy": "run:1", "derivedFrom": ["slot:1"]}
+    reg.put("dataelementconcepts", e)
+    reg.put("dataelementconcepts", {**e, "generatedBy": "run:2", "derivedFrom": ["slot:9"]})
+    got = reg.get("dataelementconcepts", "x:1")
+    assert got["generatedBy"] == "run:1" and got["derivedFrom"] == ["slot:1"]

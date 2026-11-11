@@ -217,11 +217,11 @@ def test_concepts_from_answers_and_rerun_creates_nothing(pipeline):
     full = g + profiling_graph(slots)
     assert "https://example.org/boundaries" in comparable(full, "https://example.org/population", "dataElementConcept")
     # done criterion of phase 3: a second run creates no new entries for unchanged slots
-    before = {k: set(v) for k, v in reg.entries.items()}
+    before = {f.name: f.read_text() for f in pipeline.registry_dir.glob("*.jsonl")}
     (pipeline.pipeline_dir / "answers" / "test.jsonl").unlink()      # the cache answers now
     run_all(pipeline)
-    after = Registry.load(pipeline.registry_dir, pipeline.base_iri)
-    assert {k: set(v) for k, v in after.entries.items()} == before
+    after = {f.name: f.read_text() for f in pipeline.registry_dir.glob("*.jsonl")}
+    assert after == before                                            # byte for byte: no entry, no field changes
     assert links_by_slot(pipeline)[slots[0]["iri"]]["dataElementConcept"] == a["dataElementConcept"]
 
 

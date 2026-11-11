@@ -216,13 +216,22 @@ triples, valid.
   dense integer ranges (AGE_HOURS 0–1200, MS regions) and value ranges where nearly every integer is a
   code (`range-overlap`, e.g. record numbers 1–60 against municipalities) are never linked
   automatically. Confirmations: re-attach, unplaced/ambiguous report, `confirmed-elsewhere`, drift.
-- **Phase 3:** the stage, embedding lookup (a local hashing embedder as baseline), rules for data
-  element concepts and data elements, value check, answer cache and `ap:mainObjectClass` are in place
-  and tested with recorded answers. Models: `none` (default), `answers` (answers/*.jsonl) and `claude`
-  (Messages API, structured output per ANSWER_SCHEMA, server-side refusal fallback; tested with a fake
-  client, never called for real). `claude` refuses to start without `CONCEPT_ALLOW_HOSTED=yes`, because
-  it sends up to 30 sample values per slot to a hosted API, which is an open question. Unanswered
-  questions go to `out/concept-requests.jsonl`.
+- **Phase 3:** run for real on 2026-11-11, in a Claude Code session (answers/batch-01…10.jsonl,
+  model `claude-code-session`, written through the `answers` model; hosted use approved by the user).
+  All 2,813 fingerprints answered: 2,582 slots got a data element concept, 2,531 a data element; the
+  registry holds 156 object classes, 882 properties, 1,297 concepts, 911 data elements, all with
+  status candidate. Answers of confidence below 0.8 stay candidates. A rerun leaves the registry byte
+  for byte unchanged (provenance keeps the first run). The model's code-list choices, checked
+  against the values, raised gold-value recall from 0.62 to 0.88 at precision 1.00; gold pairs:
+  precision 1.00, recall 0.43. `CONCEPT_MODEL=claude` (Messages API) is built but has not been
+  called; it needs an API key.
+- **Done criteria, checked on the local visoto-qlever:** the comparison through a shared code-list
+  value domain finds, for a Thurgau dataset, six datasets on the municipality list; through a shared
+  data element concept, a Zug dataset reaches two others (16 and 13 slots). The plan's query with
+  `ap:valueDomain/dcterms:isVersionOf?` over all value domains exceeds QLever's query memory (rule
+  value domains such as `string` join thousands of slots); restricted to enumerated value domains
+  and written bottom-up (dataset's value domains in a subquery, then a UNION over list and version)
+  it answers at once.
 - **Phase 4:** thresholds set with `python -m cmatch tune` from the gold set (containment 0.98,
   6 distinct values, lead 0.1: precision 1.00, recall 0.62 on the draft set); review queue, drift and
   registry report in `out/report.md`.
