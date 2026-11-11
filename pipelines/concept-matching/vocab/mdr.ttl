@@ -1,0 +1,154 @@
+# Copied from metadata-swiss/mds-datamodel ontology/dataelement/mdr.ttl (c815874); edit it there, then copy.
+@prefix mdr:     <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix vann:    <http://purl.org/vocab/vann/> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix foaf:    <http://xmlns.com/foaf/0.1/> .
+@prefix vcard:   <http://www.w3.org/2006/vcard/ns#> .
+@prefix dcat:    <http://www.w3.org/ns/dcat#> .
+
+# =====================================================================
+# Metadata Registry (MDR) vocabulary
+# Classes and properties only. Relationships, cardinalities and
+# value constraints are defined in mdr-shapes.ttl.
+# =====================================================================
+
+<https://register.ld.admin.ch/mds/ontology/metadataregistry/>
+    a owl:Ontology ;
+    dcterms:title "Metadata Registry vocabulary"@en ;
+    dcterms:description """Vocabulary for describing common data elements with a semantic
+representation (data element concept, object class, property) and a technical
+representation (value domain), based on ISO/IEC 11179-3. Data elements and value
+domains are at the same time SHACL shapes, so that a registered data element can be
+used directly to validate data. Constraints on registry content are given in a
+separate SHACL shapes graph."""@en ;
+    dcterms:created "2026-11-06"^^xsd:date ;
+    dcterms:modified "2026-11-10"^^xsd:date ;
+    owl:versionInfo "0.2.0" ;
+    dcterms:publisher [
+        a foaf:Organization ;
+        foaf:name "Federal Statistical Office"@en , "Bundesamt für Statistik"@de ,
+            "Office fédéral de la statistique"@fr , "Ufficio federale di statistica"@it ;
+        foaf:homepage <https://www.bfs.admin.ch>
+    ] ;
+    dcat:contactPoint [
+        a vcard:Individual ;
+        vcard:fn "Peter Hutzli"
+    ] ;
+    vann:preferredNamespacePrefix "mdr" ;
+    vann:preferredNamespaceUri "https://register.ld.admin.ch/mds/ontology/metadataregistry/" .
+
+# ---------------------------------------------------------------------
+# Classes
+# ---------------------------------------------------------------------
+
+mdr:AdministeredItem
+    a rdfs:Class, owl:Class ;
+    rdfs:label "Administered item"@en ;
+    rdfs:comment """An item registered and maintained in the metadata registry, carrying
+administrative metadata such as identifier, status, version, creator and dates.
+Corresponds to Administered_Item in ISO/IEC 11179-3 (crDDI/XMDR OWL rendering:
+http://iso.org/iso11179-3e3/Administered_Item)."""@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+mdr:DataElement
+    a rdfs:Class, owl:Class ;
+    rdfs:subClassOf mdr:AdministeredItem, sh:PropertyShape ;
+    rdfs:label "Data element"@en ;
+    rdfs:comment """A unit of data whose meaning is given by a data element concept and whose
+representation is given by a value domain. A data element is a SHACL property shape:
+sh:path is the ontology property of the data element concept, and sh:node is
+its value domain. Cardinality is not part of the data element; it is set where the
+data element is used in a data structure. Corresponds to Data_Element in ISO/IEC 11179-3
+(http://iso.org/iso11179-3e3/Data_Element)."""@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+mdr:DataElementConcept
+    a rdfs:Class, owl:Class ;
+    rdfs:subClassOf mdr:AdministeredItem ;
+    rdfs:label "Data element concept"@en ;
+    rdfs:comment """A concept that can be represented as a data element, independent of any
+representation, made of an object class and a property (e.g. Person + birth date).
+Corresponds to Data_Element_Concept in ISO/IEC 11179-3
+(http://iso.org/iso11179-3e3/Data_Element_Concept)."""@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+mdr:ObjectClass
+    a rdfs:Class, owl:Class ;
+    rdfs:subClassOf mdr:AdministeredItem ;
+    rdfs:label "Object class"@en ;
+    rdfs:comment """A set of things in the real world with common characteristics (e.g. Person),
+registered as an item of its own and linked to one or more ontology classes
+with skos:closeMatch. Corresponds to Object_Class in ISO/IEC 11179-3
+(http://iso.org/iso11179-3e3/Object_Class)."""@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+mdr:Property
+    a rdfs:Class, owl:Class ;
+    rdfs:subClassOf mdr:AdministeredItem ;
+    rdfs:label "Property"@en ;
+    rdfs:comment """A characteristic common to all members of an object class (e.g. birth date),
+registered as an item of its own and linked to one or more ontology properties
+with skos:closeMatch. Corresponds to Property in ISO/IEC 11179-3
+(http://iso.org/iso11179-3e3/Property)."""@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+mdr:ValueDomain
+    a rdfs:Class, owl:Class ;
+    rdfs:subClassOf mdr:AdministeredItem, sh:NodeShape ;
+    rdfs:label "Value domain"@en ;
+    rdfs:comment """A set of permissible values together with their technical representation.
+A value domain is a SHACL node shape without targets, holding constraints on a
+value node (sh:datatype, sh:pattern, sh:minInclusive, ...), and it is reusable
+across data elements. A value domain is enumerated if it has
+mdr:permissibleValues; otherwise it is described by its constraints alone.
+Corresponds to Value_Domain (with Enumerated_Value_Domain and
+Described_Value_Domain) in ISO/IEC 11179-3 (http://iso.org/iso11179-3e3/Value_Domain)."""@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+# ---------------------------------------------------------------------
+# Properties
+# ---------------------------------------------------------------------
+
+mdr:dataElementConcept
+    a rdf:Property, owl:ObjectProperty ;
+    rdfs:label "data element concept"@en ;
+    rdfs:comment "Links a data element to the data element concept that gives its meaning."@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+mdr:valueDomain
+    a rdf:Property, owl:ObjectProperty ;
+    rdfs:label "value domain"@en ;
+    rdfs:comment "Links a data element to the value domain that gives its representation."@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+mdr:objectClass
+    a rdf:Property, owl:ObjectProperty ;
+    rdfs:label "object class"@en ;
+    rdfs:comment "Links a data element concept to its object class."@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+mdr:property
+    a rdf:Property, owl:ObjectProperty ;
+    rdfs:label "property"@en ;
+    rdfs:comment "Links a data element concept to its property."@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+mdr:permissibleValues
+    a rdf:Property, owl:ObjectProperty ;
+    rdfs:label "permissible values"@en ;
+    rdfs:comment """Links an enumerated value domain to the SKOS concept scheme, or the SKOS
+collection for a subset, whose concepts are its permissible values."""@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+
+mdr:serialization
+    a rdf:Property, owl:ObjectProperty ;
+    rdfs:label "serialization"@en ;
+    rdfs:comment """Links a value domain to a resource descriptor for a derived, format-specific
+expression of its constraints, such as an XML Schema or JSON Schema. The SHACL
+node shape remains the normative definition."""@en ;
+    rdfs:isDefinedBy <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .

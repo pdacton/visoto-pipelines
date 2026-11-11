@@ -1,0 +1,250 @@
+# Copied from metadata-swiss/mds-datamodel ontology/autoprofiling/autoprofiling-shapes.ttl (c815874); edit it there, then copy.
+# SHACL shapes for the auto-profiling vocabulary (ap:).
+# Validate a profiling output (with its distributions) against these shapes, e.g.
+#   pyshacl -s ap-shapes.ttl -e ap.ttl data.ttl
+
+@prefix ap:    <https://register.ld.admin.ch/mds/ontology/ap/> .
+@prefix apsh:  <https://register.ld.admin.ch/mds/ontology/ap/shapes/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix dcat:  <http://www.w3.org/ns/dcat#> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix csvw:  <http://www.w3.org/ns/csvw#> .
+@prefix rml:   <http://w3id.org/rml/> .
+
+<https://register.ld.admin.ch/mds/ontology/ap/shapes/> a owl:Ontology ;
+    rdfs:label "Auto-profiling shapes"@en ;
+    rdfs:member
+        apsh:DataStructure ,
+        apsh:DatasetStructure ,
+        apsh:Container ,
+        apsh:FunctionalDependency ,
+        apsh:Slot ,
+        apsh:Observation ,
+        apsh:Sentinel ,
+        apsh:Candidate ,
+        apsh:Match ,
+        apsh:Evidence ,
+        apsh:LogicalSource ,
+        apsh:PredicateObjectMap ,
+        apsh:Run ;
+    owl:imports <https://register.ld.admin.ch/mds/ontology/ap/> ;
+    owl:versionInfo "0.2.0" ;
+    sh:declare [ sh:prefix "ap" ; sh:namespace "https://register.ld.admin.ch/mds/ontology/ap/"^^xsd:anyURI ] ,
+               [ sh:prefix "dct" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] ,
+               [ sh:prefix "dcat" ; sh:namespace "http://www.w3.org/ns/dcat#"^^xsd:anyURI ] .
+
+# =====================================================================================
+# Logical part
+# =====================================================================================
+
+apsh:DataStructure a sh:NodeShape ;
+    rdfs:label "Data structure"@en ;
+    sh:targetClass ap:DataStructure ;
+    sh:property
+        [ sh:path ap:status ; sh:minCount 1 ; sh:maxCount 1 ;
+          sh:in ( ap:profiled ap:skipped ap:failed ) ] ,
+        [ sh:path dct:identifier ; sh:minCount 1 ; sh:maxCount 1 ] ,
+        [ sh:path prov:wasGeneratedBy ; sh:minCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path [ sh:inversePath dct:conformsTo ] ; sh:minCount 1 ; sh:class dcat:Distribution ;
+          sh:message "A data structure is the dct:conformsTo of at least one distribution."@en ] ,
+        [ sh:path [ sh:inversePath ap:structure ] ; sh:class dcat:Dataset ] ,
+        [ sh:path ap:profiledDistribution ; sh:maxCount 1 ; sh:class dcat:Distribution ] ,
+        [ sh:path ap:declaredFormat ; sh:nodeKind sh:IRIOrLiteral ] ,
+        [ sh:path dct:format ; sh:maxCount 1 ; sh:nodeKind sh:IRIOrLiteral ] ,
+        [ sh:path ap:formatMatch ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ,
+        [ sh:path ap:engine ; sh:maxCount 1 ; sh:datatype xsd:string ] ,
+        [ sh:path dct:hasPart ; sh:class ap:Container ] ;
+    sh:xone (
+        # profiled: at least one container, no reason
+        [ sh:property [ sh:path ap:status ; sh:hasValue ap:profiled ] ,
+                      [ sh:path dct:hasPart ; sh:minCount 1 ] ]
+        # skipped or failed: a reason, no containers
+        [ sh:property [ sh:path ap:status ; sh:in ( ap:skipped ap:failed ) ] ,
+                      [ sh:path ap:statusReason ; sh:minCount 1 ; sh:datatype xsd:string ] ,
+                      [ sh:path dct:hasPart ; sh:maxCount 0 ] ]
+    ) .
+
+apsh:DatasetStructure a sh:NodeShape ;
+    rdfs:label "Dataset structure"@en ;
+    rdfs:comment "ap:structure is derived: every profiled distribution of the dataset conforms to it."@en ;
+    sh:targetSubjectsOf ap:structure ;
+    sh:property [ sh:path ap:structure ; sh:maxCount 1 ; sh:class ap:DataStructure ] ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "Distribution {?d} conforms to another data structure ({?other}) than the dataset's."@en ;
+        sh:prefixes <https://register.ld.admin.ch/mds/ontology/ap/shapes/> ;
+        sh:select """
+            SELECT $this ?d ?other WHERE {
+                $this ap:structure ?s ; dcat:distribution ?d .
+                ?d dct:conformsTo ?other .
+                ?other a ap:DataStructure .
+                FILTER (?other != ?s)
+            }""" ] .
+
+apsh:Container a sh:NodeShape ;
+    rdfs:label "Container"@en ;
+    sh:targetClass ap:Container ;
+    sh:property
+        [ sh:path sh:property ; sh:qualifiedValueShape [ sh:class ap:Slot ] ; sh:qualifiedMinCount 1 ;
+          sh:message "A container has at least one slot."@en ] ,
+        [ sh:path ap:mainObjectClass ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:rowCount ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ,
+        [ sh:path ap:geometryType ; sh:maxCount 1 ] ,
+        [ sh:path ap:crs ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:functionalDependency ; sh:node apsh:FunctionalDependency ] .
+
+apsh:FunctionalDependency a sh:NodeShape ;
+    rdfs:label "Functional dependency"@en ;
+    sh:targetClass ap:FunctionalDependency ;
+    sh:property
+        [ sh:path ap:determinant ; sh:minCount 1 ; sh:maxCount 1 ; sh:class ap:Slot ;
+          sh:disjoint ap:dependent ] ,
+        [ sh:path ap:dependent ; sh:minCount 1 ; sh:class ap:Slot ] ,
+        [ sh:path prov:wasGeneratedBy ; sh:minCount 1 ; sh:nodeKind sh:IRI ] .
+
+apsh:Slot a sh:NodeShape ;
+    rdfs:label "Slot"@en ;
+    sh:targetClass ap:Slot ;
+    sh:property
+        [ sh:path sh:name ; sh:minCount 1 ] ,
+        [ sh:path sh:path ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path sh:order ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ] ,
+        [ sh:path sh:minCount ; sh:maxCount 1 ; sh:datatype xsd:integer ] ,
+        [ sh:path sh:maxCount ; sh:maxCount 1 ; sh:datatype xsd:integer ] ,
+        [ sh:path sh:node ; sh:maxCount 1 ; sh:class ap:Container ;
+          sh:message "A nested container (sh:node) is an ap:Container."@en ] ,
+        [ sh:path ap:categorical ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ,
+        [ sh:path ap:booleanCandidate ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ,
+        [ sh:path ap:observed ; sh:node apsh:Observation ] ,
+        [ sh:path ap:sentinel ; sh:node apsh:Sentinel ] ,
+        [ sh:path ap:candidate ; sh:node apsh:Candidate ] ,
+        [ sh:path ap:match ; sh:node apsh:Match ] ,
+        [ sh:path ap:fingerprint ; sh:maxCount 1 ; sh:datatype xsd:string ] ,
+        # shortcuts: one winning match per kind of entry
+        [ sh:path ap:valueDomain ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:dataElementConcept ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:dataElement ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] .
+
+apsh:Observation a sh:NodeShape ;
+    rdfs:label "Observation"@en ;
+    sh:targetClass ap:Observation ;
+    sh:property
+        [ sh:path prov:wasGeneratedBy ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:count ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ,
+        [ sh:path ap:distinct ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ,
+        [ sh:path ap:nullPercentage ; sh:maxCount 1 ; sh:datatype xsd:decimal ;
+          sh:minInclusive 0 ; sh:maxInclusive 100 ] ,
+        [ sh:path ap:minValue ; sh:maxCount 1 ; sh:nodeKind sh:Literal ] ,
+        [ sh:path ap:maxValue ; sh:maxCount 1 ; sh:nodeKind sh:Literal ] ,
+        [ sh:path ap:mean ; sh:maxCount 1 ; sh:datatype xsd:decimal ] ,
+        [ sh:path ap:std ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ] ,
+        [ sh:path ap:q25 ; sh:maxCount 1 ; sh:nodeKind sh:Literal ] ,
+        [ sh:path ap:q50 ; sh:maxCount 1 ; sh:nodeKind sh:Literal ] ,
+        [ sh:path ap:q75 ; sh:maxCount 1 ; sh:nodeKind sh:Literal ] ,
+        [ sh:path ap:minLength ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ,
+        [ sh:path ap:maxLength ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ,
+        [ sh:path ap:pattern ; sh:maxCount 1 ; sh:datatype xsd:string ] ,
+        [ sh:path ap:valueHistogram ; sh:maxCount 1 ; sh:datatype rdf:JSON ] ,
+        [ sh:path ap:example ; sh:maxCount 3 ; sh:maxLength 200 ] ,
+        [ sh:path ap:support ; sh:maxCount 1 ; sh:datatype xsd:decimal ;
+          sh:minInclusive 0 ; sh:maxInclusive 1 ] ,
+        [ sh:path ap:maxItems ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ,
+        [ sh:path ap:maxPerInstance ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] .
+
+apsh:Sentinel a sh:NodeShape ;
+    rdfs:label "Sentinel"@en ;
+    sh:targetClass ap:Sentinel ;
+    sh:property
+        [ sh:path skos:notation ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ,
+        [ sh:path skos:prefLabel ; sh:datatype rdf:langString ; sh:uniqueLang true ] ,
+        [ sh:path ap:sentinelMeaning ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] .
+
+apsh:Candidate a sh:NodeShape ;
+    rdfs:label "Candidate"@en ;
+    sh:targetClass ap:Candidate ;
+    sh:property
+        [ sh:path ap:concept ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:candidateRank ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ,
+        [ sh:path ap:candidateScore ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:decimal ;
+          sh:minInclusive 0 ; sh:maxInclusive 1 ] ,
+        [ sh:path prov:wasGeneratedBy ; sh:minCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:evidence ; sh:node apsh:Evidence ] .
+
+apsh:Match a sh:NodeShape ;
+    rdfs:label "Match"@en ;
+    sh:targetClass ap:Match ;
+    sh:property
+        [ sh:path ap:concept ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:candidateScore ; sh:maxCount 1 ; sh:datatype xsd:decimal ;
+          sh:minInclusive 0 ; sh:maxInclusive 1 ] ,
+        [ sh:path ap:matchType ; sh:maxCount 1 ;
+          sh:in ( skos:exactMatch skos:closeMatch skos:broadMatch skos:narrowMatch skos:relatedMatch ) ] ,
+        [ sh:path prov:wasAttributedTo ; sh:minCount 1 ; sh:nodeKind sh:IRI ;
+          sh:message "A match names the person or run that accepted it."@en ] ,
+        [ sh:path ap:evidence ; sh:node apsh:Evidence ] ,
+        [ sh:path ap:keyDataset ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:keyDistribution ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:keyContainer ; sh:maxCount 1 ; sh:datatype xsd:string ] ,
+        [ sh:path ap:keySourceName ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    # a re-attach key is complete or absent
+    sh:or (
+        [ sh:property [ sh:path ap:keyDataset ; sh:maxCount 0 ] ,
+                      [ sh:path ap:keyDistribution ; sh:maxCount 0 ] ,
+                      [ sh:path ap:keyContainer ; sh:maxCount 0 ] ,
+                      [ sh:path ap:keySourceName ; sh:maxCount 0 ] ]
+        [ sh:property [ sh:path ap:keyDataset ; sh:minCount 1 ] ,
+                      [ sh:path ap:keyDistribution ; sh:minCount 1 ] ,
+                      [ sh:path ap:keyContainer ; sh:minCount 1 ] ,
+                      [ sh:path ap:keySourceName ; sh:minCount 1 ] ]
+    ) .
+
+apsh:Evidence a sh:NodeShape ;
+    rdfs:label "Evidence"@en ;
+    sh:targetClass ap:Evidence ;
+    sh:property
+        [ sh:path ap:method ; sh:minCount 1 ; sh:maxCount 1 ;
+          sh:in ( "code-overlap" "id-validator" "rule" "embedding" "llm" "confirmed-elsewhere" ) ] ,
+        [ sh:path ap:containment ; sh:maxCount 1 ; sh:datatype xsd:decimal ;
+          sh:minInclusive 0 ; sh:maxInclusive 1 ] ,
+        [ sh:path ap:coverage ; sh:maxCount 1 ; sh:datatype xsd:decimal ;
+          sh:minInclusive 0 ; sh:maxInclusive 1 ] ,
+        [ sh:path ap:level ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:rationale ; sh:maxCount 1 ] .
+
+# =====================================================================================
+# Physical part
+# =====================================================================================
+
+apsh:LogicalSource a sh:NodeShape ;
+    rdfs:label "Logical source of a container"@en ;
+    sh:targetSubjectsOf ap:container ;
+    sh:property
+        [ sh:path ap:container ; sh:minCount 1 ; sh:maxCount 1 ; sh:class ap:Container ] ,
+        [ sh:path rml:source ; sh:minCount 1 ; sh:maxCount 1 ; sh:class dcat:Distribution ] ,
+        [ sh:path rml:referenceFormulation ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path rml:iterator ; sh:maxCount 1 ; sh:datatype xsd:string ] ,
+        [ sh:path ap:tableName ; sh:maxCount 1 ; sh:datatype xsd:string ] ,
+        [ sh:path csvw:dialect ; sh:maxCount 1 ; sh:nodeKind sh:BlankNodeOrIRI ] .
+
+apsh:PredicateObjectMap a sh:NodeShape ;
+    rdfs:label "Predicate-object map of a slot"@en ;
+    sh:targetSubjectsOf ap:slot ;
+    sh:property [ sh:path ap:slot ; sh:minCount 1 ; sh:maxCount 1 ; sh:class ap:Slot ] .
+
+# =====================================================================================
+# Profiling runs
+# =====================================================================================
+
+apsh:Run a sh:NodeShape ;
+    rdfs:label "Profiling run"@en ;
+    sh:targetSubjectsOf ap:sampleRows ;
+    sh:property
+        [ sh:path ap:sampleRows ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ,
+        [ sh:path prov:startedAtTime ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ,
+        [ sh:path prov:endedAtTime ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] .

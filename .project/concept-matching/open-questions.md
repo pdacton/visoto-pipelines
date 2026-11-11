@@ -4,11 +4,12 @@
   third as many fingerprints), and whether sample values may be sent to a
   hosted API (possible personal data, the same concern as auto-profiling's
   example values).
-- **Embedding model:** multilingual (de/fr/it/en), local or hosted.
-- **Value sample:** about 200 random distinct values per slot, or all values
-  up to a cap such as 5,000.
-- **Thresholds:** minimum containment and number of distinct values for an
-  automatic code-list link, the confidence above which an LLM decision is
+- **Embedding model:** multilingual (de/fr/it/en), local or hosted. A dependency-free hashing
+  embedder (words and trigrams) is the baseline in `cmatch/concepts.py`.
+- **Value sample:** 200 distinct values per slot (decided 2026-11-10, `VALUE_SAMPLE`).
+- **Thresholds:** code-list thresholds set 2026-11-11 from the draft gold set
+  (containment 0.98, 6 distinct values, lead 0.1); revisit once a person has reviewed the gold set.
+  Still open: the confidence above which an LLM decision is
   accepted without review, and the precision targets (proposed: 0.9); set
   once the gold set exists.
 - **Language of created entries:** labels and definitions in English only, or

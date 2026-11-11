@@ -1,0 +1,9 @@
+# Every shortcut is backed by a match on the slot in this graph or in the confirmations graph
+# (whose matches are not in this output): a value-domain shortcut without any match is a bug.
+PREFIX ap: <https://register.ld.admin.ch/mds/ontology/ap/>
+SELECT ?problem WHERE {
+  ?slot ap:valueDomain ?vd .
+  FILTER NOT EXISTS { ?slot ap:match/ap:concept ?vd }
+  FILTER NOT EXISTS { ?slot ap:candidate/ap:concept ?vd }
+  BIND(CONCAT("value-domain shortcut without match or candidate: ", STR(?slot)) AS ?problem)
+}

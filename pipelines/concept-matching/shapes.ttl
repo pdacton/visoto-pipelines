@@ -1,0 +1,22 @@
+# Pipeline-specific SHACL shapes for the concept-matching output (scripts/validate.sh).
+# The ap: and mdr: shapes themselves are in vocab/; pipeline.env SHAPES lists all three.
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix ap:     <https://register.ld.admin.ch/mds/ontology/ap/> .
+@prefix mdr:    <https://register.ld.admin.ch/mds/ontology/metadataregistry/> .
+@prefix pipesh: <https://register.ld.admin.ch/mds/concept-matching/shapes/> .
+
+# A candidate or match proposes an entry of this registry.
+pipesh:Concept a sh:NodeShape ;
+    sh:targetObjectsOf ap:concept ;
+    sh:or ( [ sh:class mdr:ValueDomain ] [ sh:class mdr:DataElementConcept ] [ sh:class mdr:DataElement ] ) .
+
+# Shortcuts point at entries of the matching kind.
+pipesh:ValueDomainShortcut a sh:NodeShape ; sh:targetObjectsOf ap:valueDomain ; sh:class mdr:ValueDomain .
+pipesh:ConceptShortcut a sh:NodeShape ; sh:targetObjectsOf ap:dataElementConcept ; sh:class mdr:DataElementConcept .
+pipesh:DataElementShortcut a sh:NodeShape ; sh:targetObjectsOf ap:dataElement ; sh:class mdr:DataElement .
+
+# Every candidate and automatic match comes from a run.
+pipesh:Candidate a sh:NodeShape ;
+    sh:targetClass ap:Candidate ;
+    sh:property [ sh:path ap:evidence ; sh:minCount 1 ] .

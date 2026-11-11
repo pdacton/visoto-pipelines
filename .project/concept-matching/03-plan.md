@@ -104,19 +104,19 @@ copy of that run's profiles and `slots.jsonl` is kept in
 
 New pipeline `pipelines/concept-matching/`, stage `registry`.
 
-- [ ] Registry storage: `registry/*.jsonl` in the pipeline folder (value
+- [x] Registry storage: `registry/*.jsonl` in the pipeline folder (value
   domains, concepts, object classes, properties, data elements), one entry
   per line with its IRI; the stage turns them into Turtle. Entries are only
   added or changed, never renumbered.
-- [ ] Code lists: one value domain per LINDAS list and one per version (see
+- [x] Code lists: one value domain per LINDAS list and one per version (see
   [02-model.md](02-model.md#code-lists)), pointing at the LINDAS IRIs.
-- [ ] Local code index: list, version, xkos level and notation of all codes,
+- [x] Local code index: list, version, xkos level and notation of all codes,
   fetched from LINDAS into a DuckDB file in `cache/` (about 509k rows),
   refreshed when LINDAS has new versions.
-- [ ] Identifier value domains: one per ID validator (AHV number, UID,
+- [x] Identifier value domains: one per ID validator (AHV number, UID,
   EGID/EWID, postcode, …), written by hand with the rule's format and
   checksum.
-- [ ] Shapes and checks: registry entries validate against `mdr-shapes.ttl`;
+- [x] Shapes and checks: registry entries validate against `mdr-shapes.ttl`;
   every code-list wrapper's `mdr:permissibleValues` resolves on LINDAS.
 
 Done when the registry graph loads into visoto-qlever and visoto shows a
@@ -126,25 +126,25 @@ value domain with its link to LINDAS.
 
 Stage `link-values`, run after auto-profiling. No LLM.
 
-- [ ] Input `out/slots.jsonl`; work once per fingerprint.
-- [ ] Code lists: normalise values, join with the local code index, score
+- [x] Input `out/slots.jsonl`; work once per fingerprint.
+- [x] Code lists: normalise values, join with the local code index, score
   containment and coverage per list level; link automatically only when
   unambiguous, otherwise keep the top 3 as candidates (rules in
   [02-model.md](02-model.md#linking-to-code-lists)).
-- [ ] Identifiers: a slot whose values pass a validator at a high rate is
+- [x] Identifiers: a slot whose values pass a validator at a high rate is
   linked to its value domain.
-- [ ] Everything else: find or create the described value domain by rule
+- [x] Everything else: find or create the described value domain by rule
   (datatype, unit, format; geometry type and coordinate reference system).
-- [ ] Output: candidates with evidence, automatic matches, shortcut triples
+- [x] Output: candidates with evidence, automatic matches, shortcut triples
   (`ap:valueDomain`), validated by SHACL.
-- [ ] Confirmations (interim): `confirmations.csv`, edited by hand (re-attach
+- [x] Confirmations (interim): `confirmations.csv`, edited by hand (re-attach
   key, entry IRI, match type, who, when); stage `confirm` turns it into
   `out/confirmations.ttl` for the confirmations graph. A person's match
   overrides an automatic one and is offered to all slots with the same
   fingerprint (`confirmed-elsewhere`).
-- [ ] Re-attach a person's matches to the current slot IRIs by their key;
+- [x] Re-attach a person's matches to the current slot IRIs by their key;
   report those that cannot be placed or are ambiguous.
-- [ ] Gold set, part 1 (`tests/gold-values.csv`): about 150 slots with the
+- [x] Gold set, part 1 (`tests/gold-values.csv`): about 150 slots with the
   value domain they should get (or none), spread over engines and datatypes,
   including small-integer code columns. The run report gives precision and
   recall of the automatic links on it.
@@ -160,24 +160,24 @@ IRI.
 Stage `link-concepts`. Steps as in
 [02-model.md](02-model.md#finding-or-creating-a-concept).
 
-- [ ] Embedding index of the registry's object classes and properties (a
+- [x] Embedding index of the registry's object classes and properties (a
   local file), updated as entries are created.
-- [ ] Per fingerprint: describe the slot, look up the nearest entries, let
+- [x] Per fingerprint: describe the slot, look up the nearest entries, let
   the LLM name the object class and the property (each existing or new), or
   answer "none"; in the same call it decides ambiguous code-list candidates
   from phase 2.
-- [ ] Data element concepts by rule: the pair of object class and property
+- [x] Data element concepts by rule: the pair of object class and property
   (ISO/IEC 11179), created if missing.
-- [ ] Value check on every answer; answers the data contradicts are dropped.
-- [ ] New object classes, properties and concepts are written to `registry/`
+- [x] Value check on every answer; answers the data contradicts are dropped.
+- [x] New object classes, properties and concepts are written to `registry/`
   with status "candidate" and provenance.
-- [ ] Data elements by rule: a slot with a concept and a value domain gets
+- [x] Data elements by rule: a slot with a concept and a value domain gets
   the data element for that pair, created if missing.
-- [ ] Output: candidates with rationale, automatic matches above the
+- [x] Output: candidates with rationale, automatic matches above the
   confidence threshold, shortcut triples (`ap:dataElementConcept`,
   `ap:dataElement`).
-- [ ] Cache answers by fingerprint, so a rerun only asks about new slots.
-- [ ] Gold set, part 2 (`tests/gold-pairs.csv`): pairs of slots that should
+- [x] Cache answers by fingerprint, so a rerun only asks about new slots.
+- [x] Gold set, part 2 (`tests/gold-pairs.csv`): pairs of slots that should
   share a concept and pairs that should not. Concepts are created, so there
   is no fixed target to compare with; the report gives precision and recall
   on the pairs.
@@ -188,16 +188,43 @@ creates no new entries for unchanged slots.
 
 ## Phase 4: Operation
 
-- [ ] Thresholds for automatic acceptance, set from the two gold sets.
-- [ ] Review queue in the run report: one row per fingerprint, ordered by the
+- [x] Thresholds for automatic acceptance, set from the two gold sets.
+- [x] Review queue in the run report: one row per fingerprint, ordered by the
   number of slots it covers, with the candidates and their evidence.
-- [ ] New datasets: a run on new input links their slots to the existing
+- [x] New datasets: a run on new input links their slots to the existing
   registry and creates entries only where nothing fits.
-- [ ] Reruns: automatic links are regenerated; a person's matches are
+- [x] Reruns: automatic links are regenerated; a person's matches are
   re-attached and re-checked against the new values, and contradictions are
   flagged in the report (drift).
-- [ ] Registry report: entries by kind and status, entries with the most
+- [x] Registry report: entries by kind and status, entries with the most
   slots, entries with a single slot.
+
+## Implementation (2026-11-11)
+
+Branch `feat/concept-matching` (on `feat/ap-vocabulary`), not pushed; `pipelines/concept-matching/`,
+package `cmatch`, 20 tests. Run on the 100-dataset sample: 4,525 slots, 2,813 fingerprints, 115,718
+triples, valid.
+
+- **Phase 1:** 728 code-list value domains (339 lists, 389 versions) and 7 identifier value domains
+  (AHV, UID, E-GRID, EGID, EWID, EDID, postcode) in `registry/valuedomains.jsonl`; 509,213 codes in
+  `cache/codes.duckdb`, refreshed per list in 18 s. A wrapper whose scheme vanishes from LINDAS is
+  marked Deprecated, never removed. Not yet checked: loading into visoto-qlever and showing a value
+  domain in visoto.
+- **Phase 2:** 22 automatic code-list links, 11 identifiers, 4,212 described value domains (33 rule
+  value domains); 280 slots without (nested, no datatype). Two guards beyond the plan: levels that are
+  dense integer ranges (AGE_HOURS 0–1200, MS regions) and value ranges where nearly every integer is a
+  code (`range-overlap`, e.g. record numbers 1–60 against municipalities) are never linked
+  automatically. Confirmations: re-attach, unplaced/ambiguous report, `confirmed-elsewhere`, drift.
+- **Phase 3:** the stage, embedding lookup (a local hashing embedder as baseline), rules for data
+  element concepts and data elements, value check, answer cache and `ap:mainObjectClass` are in place
+  and tested with recorded answers. **No model is wired in:** `CONCEPT_MODEL=none` (default) or
+  `answers` (answers/*.jsonl). Every run writes the unanswered questions to
+  `out/concept-requests.jsonl`. A hosted model waits for the open questions.
+- **Phase 4:** thresholds set with `python -m cmatch tune` from the gold set (containment 0.98,
+  6 distinct values, lead 0.1: precision 1.00, recall 0.62 on the draft set); review queue, drift and
+  registry report in `out/report.md`.
+- **Gold sets are a draft** labelled by Claude Code (`tests/GOLD.md`): 131 slots, 17 pairs. The pairs
+  set measures nothing until concepts exist.
 
 ## Later
 

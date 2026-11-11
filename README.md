@@ -9,6 +9,7 @@ the upload modal's URL tab into the named graph `urn:data:<name>-githubpipeline`
 |---|---|---|
 | I14Y | [i14y.ttl](https://github.com/pdacton/visoto-pipelines/releases/download/i14y-latest/i14y.ttl) | [.project/i14y](.project/i14y) |
 | Auto-profiling (structures of opendata.swiss distributions) | local run only, `out/auto-profiling.ttl` | [.project/auto-profiling](.project/auto-profiling) |
+| Concept matching (slots → metadata registry) | local run only, `out/concept-matching.ttl` + `out/concept-matching-confirmations.ttl` | [.project/concept-matching](.project/concept-matching) |
 
 ## Run locally
 
@@ -37,6 +38,17 @@ DATASETS=datasets-large.txt scripts/run.sh auto-profiling
 ```
 
 Output: `pipelines/auto-profiling/out/auto-profiling.ttl`, plus `out/report.md`.
+
+```sh
+DATASETS=datasets-sample.txt scripts/run.sh auto-profiling   # the 100-dataset working set
+scripts/run.sh concept-matching      # codes, slots → registry → confirm → link-values → link-concepts → emit
+(cd pipelines/concept-matching && uv run python -m cmatch tune)   # thresholds on the gold set
+(cd pipelines/concept-matching && uv run pytest)
+```
+
+Output: `pipelines/concept-matching/out/concept-matching.ttl` (graph `urn:data:concept-matching-githubpipeline`,
+replaced on every run), `out/concept-matching-confirmations.ttl` (a person's matches, own graph, never replaced),
+`out/report.md` (links, review queue, drift, gold sets, registry).
 
 ## Adding a pipeline
 

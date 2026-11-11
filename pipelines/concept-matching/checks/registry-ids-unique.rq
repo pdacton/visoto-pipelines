@@ -1,0 +1,9 @@
+# Registry identifiers are unique per kind of entry.
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX mdr: <https://register.ld.admin.ch/mds/ontology/metadataregistry/>
+SELECT ?problem WHERE {
+  ?a a ?cls ; dct:identifier ?id . ?b a ?cls ; dct:identifier ?id .
+  VALUES ?cls { mdr:ValueDomain mdr:ObjectClass mdr:Property mdr:DataElementConcept mdr:DataElement }
+  FILTER(STR(?a) < STR(?b))
+  BIND(CONCAT("duplicate identifier ", ?id, ": ", STR(?a), " ", STR(?b)) AS ?problem)
+}
