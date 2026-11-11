@@ -280,7 +280,11 @@ class Linker:
         new = part.get("new")
         if not new or not (new.get("title") or {}).get("en"):
             return None
-        ident = opaque_id(kind, new["title"]["en"].strip().lower(), fp)
+        title = new["title"]["en"].strip().lower()
+        same = next((e for e in self.reg.all(kind) if (e.get("title") or {}).get("en", "").strip().lower() == title), None)
+        if same:                      # an entry with this exact title exists: reuse it, no duplicate
+            return same
+        ident = opaque_id(kind, title, fp)
         entry = self.reg.put(kind, {"iri": self.reg.iri(kind, ident), "id": ident, "title": new["title"],
                                     "description": new.get("description") or {}, "status": CANDIDATE,
                                     "closeMatch": new.get("closeMatch") or [], "generatedBy": self.run,

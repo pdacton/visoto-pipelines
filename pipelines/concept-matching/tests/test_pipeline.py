@@ -197,6 +197,7 @@ def test_concepts_from_answers_and_rerun_creates_nothing(pipeline):
     reg = Registry.load(pipeline.registry_dir, pipeline.base_iri)
     a, b = links[slots[0]["iri"]], links[slots[2]["iri"]]
     assert a["dataElementConcept"] and a["dataElementConcept"] == b["dataElementConcept"]
+    assert len(reg.all("objectclasses")) == 1          # "Municipality" named by three answers, created once
     assert a["dataElement"] == b["dataElement"]
     de = reg.get("dataelements", a["dataElement"])
     assert de["valueDomain"] == a["valueDomain"] and de["path"] == "http://schema.org/identifier"
