@@ -11,6 +11,9 @@ dependencies = [
 
 [dependency-groups]
 dev = ["pytest>=8", "pyshacl>=0.40"]
+llm = [
+    "anthropic>=2.8.0",
+]
 
 [tool.uv]
 package = false

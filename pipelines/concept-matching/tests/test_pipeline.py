@@ -276,3 +276,63 @@ def test_tune_writes_a_table(pipeline, monkeypatch):
     tune.run(pipeline)
     text = (pipeline.out / "tuning.md").read_text()
     assert "| 0.95 | 5 | 0.1 | 1.00 | 1.00 |" in text and "| 0.95 | 7 | 0.1 | – | 0.00 |" in text
+
+
+# --- the hosted model, with a fake client (no network) ---------------------------------------
+
+class FakeBlock:
+    def __init__(self, text):
+        self.type, self.text = "text", text
+
+
+class FakeResponse:
+    def __init__(self, data, stop="end_turn"):
+        self.stop_reason, self.content = stop, [FakeBlock(json.dumps(data))]
+
+
+class FakeClient:
+    def __init__(self, replies):
+        self.replies, self.requests = replies, []
+        self.beta = self
+        self.messages = self
+
+    def create(self, **kw):
+        self.requests.append(kw)
+        fp = json.loads(kw["messages"][0]["content"])["fingerprint"]
+        return self.replies.get(fp, FakeResponse({}, stop="refusal"))
+
+
+def part(title=None, iri=None):
+    return {"iri": iri, "title": title, "description": f"The {title}." if title else None, "closeMatch": []}
+
+
+def test_claude_model_with_a_fake_client(pipeline):
+    slots = slots_v1()
+    write_slots(pipeline, slots)
+    seed.run(pipeline)
+    confirm.run(pipeline)
+    linkvalues.run(pipeline)
+    client = FakeClient({
+        "fp-muni": FakeResponse({"none": False, "objectClass": part("Municipality"),
+                                 "property": part("BFS municipality number"), "codeList": None,
+                                 "confidence": 0.93, "rationale": "Official numbers."}),
+        "fp-date": FakeResponse({"none": True, "objectClass": part(), "property": part(), "codeList": None,
+                                 "confidence": 0.9, "rationale": "Layout column."}),
+    })
+    model = concepts.ClaudeModel(client=client)
+    reg = Registry.load(pipeline.registry_dir, pipeline.base_iri)
+    linker = concepts.Linker(pipeline, reg, model)
+    links = {r["slot"]: r for r in linker.link(slots, linkvalues.read(pipeline))}
+    assert links[slots[0]["iri"]]["dataElementConcept"] == links[slots[2]["iri"]]["dataElementConcept"]
+    assert {"concept": "none"} in links[slots[5]["iri"]]["notes"]
+    # one call per fingerprint; refusals stay requests
+    assert model.calls == 5 and len(linker.requests) == 3
+    req = client.requests[0]
+    assert req["output_config"]["format"]["schema"] == concepts.ANSWER_SCHEMA and req["fallbacks"] == "default"
+
+
+def test_claude_model_needs_explicit_permission(pipeline):
+    import pytest
+    pipeline.values["CONCEPT_MODEL"] = "claude"
+    with pytest.raises(SystemExit, match="CONCEPT_ALLOW_HOSTED"):
+        concepts.model_from_config(pipeline)

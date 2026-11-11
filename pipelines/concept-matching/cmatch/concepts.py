@@ -13,7 +13,8 @@ by rule. Answers are cached by fingerprint, so a rerun only asks about new slots
 
 Which model answers is open (open-questions.md: model, and whether sample values may go to a
 hosted API). Models here: `none` (default: no concepts) and `answers` (answers/*.jsonl, written by a
-person or by a model run outside this pipeline, keyed by fingerprint). Every run writes the
+person or by a model run outside this pipeline, keyed by fingerprint), and `claude` (Anthropic's
+Messages API; needs CONCEPT_ALLOW_HOSTED=yes and `uv sync --group llm`). Every run writes the
 questions it could not answer to out/concept-requests.jsonl.
 """
 import hashlib
@@ -102,13 +103,112 @@ class AnswersModel:
         return self.answers.get(request["fingerprint"])
 
 
+PART_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "iri": {"type": ["string", "null"], "description": "IRI of an existing entry from the nearest list, or null"},
+        "title": {"type": ["string", "null"], "description": "English label of a new entry (when iri is null)"},
+        "description": {"type": ["string", "null"], "description": "English definition of a new entry"},
+        "closeMatch": {"type": "array", "items": {"type": "string"},
+                       "description": "ontology terms the new entry corresponds to, e.g. http://schema.org/Person"},
+    },
+    "required": ["iri", "title", "description", "closeMatch"],
+    "additionalProperties": False,
+}
+ANSWER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "none": {"type": "boolean", "description": "true when the column carries no meaningful concept"},
+        "objectClass": PART_SCHEMA,
+        "property": PART_SCHEMA,
+        "codeList": {"type": ["string", "null"], "description": "IRI of the fitting code-list candidate, or null"},
+        "confidence": {"type": "number", "description": "0 to 1"},
+        "rationale": {"type": "string"},
+    },
+    "required": ["none", "objectClass", "property", "codeList", "confidence", "rationale"],
+    "additionalProperties": False,
+}
+SYSTEM_PROMPT = """You build a metadata registry following ISO/IEC 11179 from the columns of open government \
+datasets (Switzerland; names and values in German, French, Italian or English).
+
+For one column you get its name, its table, neighbouring columns, datatype, a sample of values, its value \
+domain if known, code-list candidates, and the nearest existing object classes and properties.
+
+Name the column's object class and property:
+- The object class is the kind of thing a record of the table describes (e.g. Person, Municipality, \
+Building), not the kind of thing a value refers to. A column "Wohngemeinde" in a table of persons has the \
+object class Person and the property "municipality of residence".
+- The property is the characteristic the column holds. Be specific: "municipality of residence" and \
+"municipality of work" are different properties.
+- Reuse an existing entry (give its iri) when it means the same; otherwise leave iri null and give an \
+English title, a one-sentence definition, and ontology terms it corresponds to if you know them.
+- If the column carries no meaning of its own (technical ids such as objectid or gml_id, empty columns, \
+layout artefacts), answer none = true.
+- If code-list candidates are given, set codeList to the one whose meaning fits the column, or null.
+Give a confidence between 0 and 1 and a one-sentence rationale."""
+
+
+class ClaudeModel:
+    """Asks Claude (Messages API) per fingerprint; the answer follows ANSWER_SCHEMA.
+
+    Sends the slot description, including up to 30 sample values, to Anthropic's hosted API, so it runs
+    only with CONCEPT_ALLOW_HOSTED=yes (open question: may sample values leave the machine?)."""
+
+    def __init__(self, model: str = "claude-opus-5-5", effort: str = "medium", client=None):
+        if client is None:
+            import anthropic          # optional dependency: uv sync --group llm
+            client = anthropic.Anthropic()
+        self.client, self.model, self.effort = client, model, effort
+        self.calls = 0
+
+    def answer(self, request: dict) -> dict | None:
+        self.calls += 1
+        response = self.client.beta.messages.create(
+            model=self.model,
+            max_tokens=16000,
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",                      # re-run a policy decline on a fallback model
+            system=SYSTEM_PROMPT,
+            output_config={"effort": self.effort, "format": {"type": "json_schema", "schema": ANSWER_SCHEMA}},
+            messages=[{"role": "user", "content": json.dumps(request, ensure_ascii=False)}],
+        )
+        if response.stop_reason != "end_turn":          # refusal or max_tokens: leave it as a request
+            log(f"link-concepts: {request['fingerprint']} not answered ({response.stop_reason})")
+            return None
+        data = json.loads(next(b.text for b in response.content if b.type == "text"))
+        return to_answer(data, self.model)
+
+
+def to_answer(data: dict, model: str) -> dict:
+    """ANSWER_SCHEMA output → the answer format the linker reads ({"iri"} or {"new": {...}} per part)."""
+    def part(p: dict) -> dict | None:
+        if p.get("iri"):
+            return {"iri": p["iri"]}
+        if p.get("title"):
+            return {"new": {"title": {"en": p["title"]},
+                            "description": {"en": p["description"]} if p.get("description") else {},
+                            "closeMatch": [c for c in p.get("closeMatch") or [] if re.match(r"^https?://", c)]}}
+        return None
+    if data.get("none"):
+        return {"none": True, "rationale": data.get("rationale"), "model": model}
+    return {"objectClass": part(data["objectClass"]), "property": part(data["property"]),
+            "codeList": data.get("codeList"), "confidence": max(0.0, min(1.0, float(data.get("confidence", 0)))),
+            "rationale": data.get("rationale"), "model": model}
+
+
 def model_from_config(cfg: Config) -> Model:
     name = cfg["CONCEPT_MODEL"]
     if name == "none":
         return NoModel()
     if name == "answers":
         return AnswersModel(cfg.pipeline_dir / "answers")
-    raise SystemExit(f"link-concepts: unknown CONCEPT_MODEL {name!r} (none, answers)")
+    if name == "claude":
+        if cfg.values.get("CONCEPT_ALLOW_HOSTED") != "yes":
+            raise SystemExit("link-concepts: CONCEPT_MODEL=claude sends sample values to Anthropic's API; "
+                             "set CONCEPT_ALLOW_HOSTED=yes once that is decided (open-questions.md)")
+        return ClaudeModel(cfg.values.get("CONCEPT_CLAUDE_MODEL") or "claude-opus-5-5",
+                           cfg.values.get("CONCEPT_EFFORT") or "medium")
+    raise SystemExit(f"link-concepts: unknown CONCEPT_MODEL {name!r} (none, answers, claude)")
 
 
 # --- the stage ----------------------------------------------------------------------

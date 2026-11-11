@@ -218,9 +218,11 @@ triples, valid.
   automatically. Confirmations: re-attach, unplaced/ambiguous report, `confirmed-elsewhere`, drift.
 - **Phase 3:** the stage, embedding lookup (a local hashing embedder as baseline), rules for data
   element concepts and data elements, value check, answer cache and `ap:mainObjectClass` are in place
-  and tested with recorded answers. **No model is wired in:** `CONCEPT_MODEL=none` (default) or
-  `answers` (answers/*.jsonl). Every run writes the unanswered questions to
-  `out/concept-requests.jsonl`. A hosted model waits for the open questions.
+  and tested with recorded answers. Models: `none` (default), `answers` (answers/*.jsonl) and `claude`
+  (Messages API, structured output per ANSWER_SCHEMA, server-side refusal fallback; tested with a fake
+  client, never called for real). `claude` refuses to start without `CONCEPT_ALLOW_HOSTED=yes`, because
+  it sends up to 30 sample values per slot to a hosted API, which is an open question. Unanswered
+  questions go to `out/concept-requests.jsonl`.
 - **Phase 4:** thresholds set with `python -m cmatch tune` from the gold set (containment 0.98,
   6 distinct values, lead 0.1: precision 1.00, recall 0.62 on the draft set); review queue, drift and
   registry report in `out/report.md`.
