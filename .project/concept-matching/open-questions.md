@@ -18,8 +18,9 @@
   concept ("record identifier") or none.
 - **Rule-made value domains:** how fine the rules cut (is "integer, year" one
   value domain or is every range its own).
-- **Labels instead of codes:** columns that hold "Bern" instead of `BE` need
-  matching on `skos:prefLabel` per language.
+- **Labels and codes:** decided 2026-11-14: both are matched, since a data
+  owner may publish either or both. Planned in
+  [03-plan.md](03-plan.md#phase-3b-object-class-per-column-in-its-table-2026-11-14).
 - **Confirmations graph:** its name, and how the review UI will write it
   later (visoto's `/api/sparql` proxy has a write allowlist).
 - **Registry in the repo:** whether LLM-created entries may live in the

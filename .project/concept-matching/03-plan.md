@@ -10,6 +10,7 @@ every slot to it.
 | 1 | Registry seed: code-list and identifier value domains |
 | 2 | Slots linked to value domains: technical comparison works |
 | 3 | Concepts found or created per slot: semantic comparison works |
+| 3b | Revision after review: object class per column in its table, with table and dataset context; patterns; labels and codes (open) |
 | 4 | Operation: thresholds, review queue, reruns |
 
 ## Phase 0: Vocabulary and auto-profiling prerequisites
@@ -238,6 +239,164 @@ triples, valid.
 - **Gold sets are a draft** labelled by Claude Code (`tests/GOLD.md`): 131 slots, 17 pairs. The pairs
   set measures nothing until concepts exist.
 
+## Phase 3b: Object class per column in its table (2026-11-14)
+
+Status: planned, nothing implemented. Revises phase 3 after a review of the
+run on the 100-dataset sample.
+
+### Why
+
+The model is right as it is: every slot gets its own data element, so a
+denormalised table can carry several object classes. The implementation
+assumed normalised tables in three places, and the model saw too little of
+the table to decide.
+
+| Finding on the 100-dataset sample | Number |
+|---|---|
+| Fingerprints whose slots sit in more than one table | 423 of 1,559 with a concept |
+| Their slots; of these, object class differs from the table's majority | 1,446; 208 (upper bound, includes real denormalisation) |
+| `geom` columns without a value sample sharing one answer, "geometry (Agglomeration programme measure)" | 50 slots in 21 datasets (land-use plans, groundwater, farms, addresses) |
+| Tables with concepts; with more than one object class | 463; 158 |
+| Fingerprints in a table named `main` or unnamed | 743 of 2,813 |
+| Neighbouring column names the model sees per slot | 5 |
+| Dataset fields read by auto-profiling's `resolve` | none (distribution fields only) |
+| Value-domain links that land on the generic `described/string` ("Text") | 2,706 of 4,245 |
+| Slots linked to a code list or identifier | 64 of 4,525 |
+| What the code index holds per code | the notation only: `BE` matches the canton list, "Bern" does not |
+
+Causes:
+
+- The prompt (`cmatch/concepts.py`) and [02-model.md](02-model.md#concepts)
+  say the object class is the kind of thing a record of the table describes,
+  and that the slots of one container normally share it.
+- Answers are cached per fingerprint (name, datatype, value sample). The
+  object class depends on the table, which is not in the fingerprint.
+- The model sees one column, five neighbouring names and the container
+  label. It sees no dependencies and nothing about the dataset.
+
+Two gaps on the value-domain side are closed in the same revision, because
+"which datasets use X, whatever its representation" depends on them:
+
+- A string column gets the value domain "Text" whatever its values look
+  like, so columns with the same shape of identifier or in-house code never
+  meet.
+- A data owner may publish a code, its label, or both. Only codes are
+  matched today.
+
+### The rule
+
+A column's object class is the entity whose key determines the column.
+
+- A key that points to another entity belongs to the **referencing** entity:
+  `wohngemeinde_bfs` in a table of persons is Person + "municipality of
+  residence".
+- Columns that depend on that key belong to the **referenced** entity:
+  `gemeinde_name` next to it is Municipality + "name".
+- Columns that depend only on the row key belong to the table's own entity.
+
+### Tasks
+
+Auto-profiling (`pipelines/auto-profiling/`):
+
+- [ ] `resolve`: read the dataset's title, description, keywords and themes
+  (`dct:title`, `dct:description`, `dcat:keyword`, `dcat:theme`). One
+  language per dataset; description cut at 500 characters.
+- [ ] `profile`: functional dependencies per container, from the sample.
+  Single-column determinants only (`bfs_nr → gemeinde_name`), each with its
+  support (rows, distinct determinant values). A column that is unique per
+  row is recorded as a candidate row key instead. Tabular and geo engines
+  first. Dependencies from a sample are evidence, not proof: none are
+  reported below a minimum number of rows.
+- [ ] `profile`: a pattern per string slot, from the value sample: the shape
+  of the values as a regular expression (`^CH\d{12}$`, `^[A-Z]{2}$`),
+  reported only when one shape covers nearly all values.
+- [ ] `emit`: `slots.jsonl` carries, once per container and not on every
+  slot, the dataset context, the title of the representative distribution
+  (already fetched, not passed on today), the full list of column names with
+  datatypes, and the dependencies; per slot, its pattern. In the graph,
+  dependencies become `ap:FunctionalDependency` and patterns `ap:pattern` on
+  the observation (both terms exist in the `ap:` vocabulary, neither is
+  emitted today).
+
+Concept matching (`pipelines/concept-matching/`):
+
+- [ ] Write [the rule](#the-rule) into the prompt and into
+  [02-model.md](02-model.md#concepts), replacing "the slots of one container
+  normally share their object class". `ap:mainObjectClass` becomes the
+  object class of the columns that depend on the row key (today: the
+  majority of the container's slots).
+- [ ] Request: the model sees the whole table (all columns, dependencies,
+  dataset context, distribution title) and gives one answer per column.
+- [ ] Cache: property and code-list choice stay keyed by fingerprint. The
+  object class is keyed by fingerprint plus table (dataset and container
+  name, as in the re-attach key). Dataset context is not part of any key, so
+  an edited description causes no new call.
+- [ ] Existing answers: properties are kept, object classes are asked again
+  under the rule.
+- [ ] Tests: a denormalised table gets two object classes (person with
+  `wohngemeinde_bfs` and `gemeinde_name`); two tables sharing a `geom`
+  fingerprint get different object classes; a changed dataset description
+  makes no model call.
+
+Value domains (`pipelines/concept-matching/`, stages `codes` and
+`link-values`, no LLM):
+
+- [ ] Patterns: the rule for described value domains uses the slot's pattern
+  for strings, so two string columns with the same specific shape reach the
+  same entry and free text stays "Text".
+- [ ] Labels and codes: the code index also holds each code's labels
+  (`skos:prefLabel`, all languages). A slot's values are compared with the
+  notations and with the labels, normalised for case, accents and
+  whitespace. A column of codes and a column of labels of the same list link
+  to the same value domain; the evidence records what matched (notation or
+  label, and the language).
+- [ ] The rules for an automatic link (containment, distinct values, lead
+  over the next list) apply to label matches as well. Generic labels ("Ja",
+  "Nein", "Total", "Andere") occur in many lists and must not link on their
+  own.
+- [ ] Vocabulary (`metadata-swiss`): a term on `ap:Evidence` for what
+  matched.
+- [ ] Gold set: cases with labels, and with a code column and a label column
+  of the same list in one table.
+
+Done when, on the 100-dataset sample: no `geom` column carries the object
+class of another table's entity; in the municipal-finance table
+`gemeinde_name` is Municipality + "name" while the finance ratios keep the
+table's own object class; a rerun with an edited dataset description makes
+no model call; a column of canton names and a column of canton
+abbreviations link to the same value domain; and the report shows pattern
+value domains shared by more than one dataset.
+
+### Choices made while writing, to confirm
+
+- **Language of the dataset context:** the first available of de, fr, it, en.
+- **Unit of a model call:** the table (confirmed 2026-11-14). All its
+  columns that lack an answer are asked together, with the full column list
+  as context. Today it is one call per fingerprint.
+- **Dependencies:** single-column determinants only, no composite keys.
+- **Concept registry:** reset once for this revision (confirmed
+  2026-11-14; still the experimentation phase, nothing is published). The
+  object classes, concepts and data elements of the first run are discarded
+  and created again by the phase 3b rerun; properties and value domains are
+  kept. This is a single exception: the registry is state and is not rebuilt
+  on a normal run. Still to confirm: from the first load into a shared graph
+  on, an entry is never removed, only marked Deprecated with a pointer to
+  its replacement.
+- **Codes and labels share one value domain.** Both link to the code list's
+  entry and the link says what matched. Strictly by ISO/IEC 11179 they are
+  two value domains of one conceptual domain; that level does not exist in
+  `mdr:` and is still undecided (below).
+- **When a pattern is specific enough** to make its own value domain: a
+  fixed shape that contains digits or punctuation. Everything else stays
+  "Text".
+
+### Not covered here
+
+Raised in the same review and still undecided: a level above the value
+domain (one entry for "municipality" whatever its representation), a real
+embedding model for the lookup, a run of the `claude` model path, and a gold
+set labelled by a person.
+
 ## Later
 
 - **Pruning:** merging duplicate concepts, object classes and properties in
@@ -248,4 +407,5 @@ triples, valid.
 - Converting datasets to RDF: target shapes, RML (triples maps, sentinels),
   conversion and validation of the converted data.
 - Superset structures: one structure for slightly diverging distributions.
-- Functional dependencies, patterns and value histograms in auto-profiling.
+- Value histograms in auto-profiling (functional dependencies and patterns
+  moved to [phase 3b](#phase-3b-object-class-per-column-in-its-table-2026-11-14)).
