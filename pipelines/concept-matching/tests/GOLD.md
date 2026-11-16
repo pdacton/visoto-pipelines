@@ -7,6 +7,9 @@
   60 with code-list candidates, the rest other slots with values), one per fingerprint, keyed by the
   re-attach key. `expected` is a registry identifier (a code list counts with all its versions, or
   `identifier/<name>`), `described` (only the rule-made value domain) or `none`.
+  Added 2026-11-16 (phase 3b): 12 label cases, among them tables with a code column and a label
+  column of the same list (`entity_id`/`entity_name`, `bfs_nr_gemeinde`/`gemeinde_name`,
+  `cantonabbreviation`/`cantonname`) and yes/no columns that must stay `described`.
 - `gold-pairs.csv`: pairs of slots that should (`same` 1) or should not (0) share a data element
   concept. Derived from gold-values; still small.
 

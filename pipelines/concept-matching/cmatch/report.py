@@ -55,14 +55,16 @@ def gold_values(rows: list[dict], slots: list[dict], links: dict, reg: Registry)
     expected: a registry identifier (e.g. DV_KT_BEZ_GDE_SNAP, identifier/egid) for slots that should
     get that code-list or identifier value domain, `described` for slots that should get only their
     described value domain, `none` for slots that should get no value domain. A code-list version
-    counts as its list."""
+    counts as its list. A key that matches several slots with one fingerprint (the same column in two
+    structures of a dataset) is evaluated once."""
     idx = slot_by_key(slots)
     tp = fp = fn = 0
     missing, errors = [], []
     for r in rows:
         key = (r["dataset"], r["container"], r["source_name"])
         found = idx.get(key, [])
-        if len(found) != 1:
+        # one slot, or the same column in several structures of the dataset (one fingerprint, one result)
+        if not found or len({s["fingerprint"] for s in found}) != 1:
             missing.append(key)
             continue
         rec = links[found[0]["iri"]]
@@ -138,6 +140,25 @@ def build(cfg: Config) -> tuple[str, dict]:
             "Code lists, why no automatic link (per slot):", "",
             table(["reason", "slots"], [[k or "linked", n] for k, n in
                                        Counter(r.get("codeReason") for r in links.values()).most_common()])]
+
+    # what code-list links matched, and value domains shared across datasets
+    matched = Counter()
+    for r in links.values():
+        for m in r["matches"]:
+            if m["kind"] == "valueDomain" and (m.get("evidence") or {}).get("matched"):
+                matched[(m["evidence"]["matched"], ", ".join(m["evidence"].get("languages") or []))] += 1
+    out += ["", "Code-list links by what the values matched:", "",
+            table(["matched", "label languages", "slots"], [[k, l, n] for (k, l), n in sorted(matched.items())])
+            if matched else "None."]
+    shared = defaultdict(set)
+    for r in links.values():
+        e = reg.get("valuedomains", r.get("valueDomain") or "")
+        if e and e.get("pattern") and e.get("kind") == "described":
+            shared[e["iri"]].add(by_iri[r["slot"]]["key"]["dataset"])
+    rows = sorted(([reg.get("valuedomains", iri)["pattern"], len(ds)] for iri, ds in shared.items() if len(ds) > 1),
+                  key=lambda x: (-x[1], x[0]))
+    out += ["", f"### Pattern value domains ({len(shared)}, {len(rows)} shared by more than one dataset)", "",
+            table(["pattern", "datasets"], rows) if rows else "None shared."]
 
     # review queue: one row per fingerprint with code-list candidates but no automatic code-list link
     queue = []

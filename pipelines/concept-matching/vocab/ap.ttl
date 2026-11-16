@@ -1,4 +1,4 @@
-# Copied from metadata-swiss/mds-datamodel ontology/autoprofiling/autoprofiling.ttl (c815874); edit it there, then copy.
+# Copied from metadata-swiss/mds-datamodel ontology/autoprofiling/autoprofiling.ttl (ebc116a); edit it there, then copy.
 # Auto-profiling vocabulary (ap:)
 #
 # Describes the structure of a dataset at two levels:
@@ -153,6 +153,27 @@ ap:determinant a owl:ObjectProperty ;
 ap:dependent a owl:ObjectProperty ;
     rdfs:label "dependent"@en ;
     rdfs:domain ap:FunctionalDependency ;
+    rdfs:range ap:Slot ;
+    rdfs:isDefinedBy ap: .
+
+ap:supportRows a owl:DatatypeProperty ;
+    rdfs:label "support rows"@en ;
+    rdfs:comment "Sample rows with a value of the determinant that the dependency was checked on."@en ;
+    rdfs:domain ap:FunctionalDependency ;
+    rdfs:range xsd:integer ;
+    rdfs:isDefinedBy ap: .
+
+ap:determinantValues a owl:DatatypeProperty ;
+    rdfs:label "determinant values"@en ;
+    rdfs:comment "Distinct values of the determinant in those rows. Together with ap:supportRows it says how strong the evidence is: few repeated values make a weak dependency."@en ;
+    rdfs:domain ap:FunctionalDependency ;
+    rdfs:range xsd:integer ;
+    rdfs:isDefinedBy ap: .
+
+ap:candidateKey a owl:ObjectProperty ;
+    rdfs:label "candidate key"@en ;
+    rdfs:comment "A slot whose values are present and unique in every row of the container's sample: a candidate row key. Observed, never a constraint."@en ;
+    rdfs:domain ap:Container ;
     rdfs:range ap:Slot ;
     rdfs:isDefinedBy ap: .
 
@@ -375,6 +396,20 @@ ap:level a owl:ObjectProperty ;
     rdfs:label "level"@en ;
     rdfs:comment "code-overlap: the level (xkos:ClassificationLevel) of a hierarchical code list the slot's values belong to, e.g. municipalities in a canton/district/municipality list."@en ;
     rdfs:domain ap:Evidence ;
+    rdfs:isDefinedBy ap: .
+
+ap:matchedOn a owl:DatatypeProperty ;
+    rdfs:label "matched on"@en ;
+    rdfs:comment "code-overlap: what the slot's values matched, \"notation\" (the codes), \"label\" (the codes' labels) or \"notation+label\". A column of codes and a column of their labels link to the same value domain; this says which one a slot is."@en ;
+    rdfs:domain ap:Evidence ;
+    rdfs:range xsd:string ;
+    rdfs:isDefinedBy ap: .
+
+ap:labelLanguage a owl:DatatypeProperty ;
+    rdfs:label "label language"@en ;
+    rdfs:comment "code-overlap: a language (BCP 47 tag) of the code labels the slot's values matched; one per language."@en ;
+    rdfs:domain ap:Evidence ;
+    rdfs:range xsd:string ;
     rdfs:isDefinedBy ap: .
 
 ap:rationale a owl:DatatypeProperty ;

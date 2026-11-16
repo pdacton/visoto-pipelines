@@ -1,4 +1,4 @@
-# Copied from metadata-swiss/mds-datamodel ontology/autoprofiling/autoprofiling-shapes.ttl (c815874); edit it there, then copy.
+# Copied from metadata-swiss/mds-datamodel ontology/autoprofiling/autoprofiling-shapes.ttl (ebc116a); edit it there, then copy.
 # SHACL shapes for the auto-profiling vocabulary (ap:).
 # Validate a profiling output (with its distributions) against these shapes, e.g.
 #   pyshacl -s ap-shapes.ttl -e ap.ttl data.ttl
@@ -97,7 +97,8 @@ apsh:Container a sh:NodeShape ;
         [ sh:path ap:rowCount ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ,
         [ sh:path ap:geometryType ; sh:maxCount 1 ] ,
         [ sh:path ap:crs ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
-        [ sh:path ap:functionalDependency ; sh:node apsh:FunctionalDependency ] .
+        [ sh:path ap:functionalDependency ; sh:node apsh:FunctionalDependency ] ,
+        [ sh:path ap:candidateKey ; sh:class ap:Slot ] .
 
 apsh:FunctionalDependency a sh:NodeShape ;
     rdfs:label "Functional dependency"@en ;
@@ -106,6 +107,8 @@ apsh:FunctionalDependency a sh:NodeShape ;
         [ sh:path ap:determinant ; sh:minCount 1 ; sh:maxCount 1 ; sh:class ap:Slot ;
           sh:disjoint ap:dependent ] ,
         [ sh:path ap:dependent ; sh:minCount 1 ; sh:class ap:Slot ] ,
+        [ sh:path ap:supportRows ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ,
+        [ sh:path ap:determinantValues ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ,
         [ sh:path prov:wasGeneratedBy ; sh:minCount 1 ; sh:nodeKind sh:IRI ] .
 
 apsh:Slot a sh:NodeShape ;
@@ -215,6 +218,8 @@ apsh:Evidence a sh:NodeShape ;
         [ sh:path ap:coverage ; sh:maxCount 1 ; sh:datatype xsd:decimal ;
           sh:minInclusive 0 ; sh:maxInclusive 1 ] ,
         [ sh:path ap:level ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:matchedOn ; sh:maxCount 1 ; sh:in ( "notation" "label" "notation+label" ) ] ,
+        [ sh:path ap:labelLanguage ; sh:datatype xsd:string ] ,
         [ sh:path ap:rationale ; sh:maxCount 1 ] .
 
 # =====================================================================================

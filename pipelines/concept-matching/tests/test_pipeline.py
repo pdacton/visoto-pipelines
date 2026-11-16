@@ -179,25 +179,30 @@ def test_concepts_from_answers_and_rerun_creates_nothing(pipeline):
     from pyshacl import validate
     slots = slots_v1()
     write_slots(pipeline, slots)
+    muni = {"new": {"title": {"en": "Municipality"}, "closeMatch": ["http://schema.org/AdministrativeArea"]}}
+    pop, bnd = {"dataset": "https://example.org/population", "container": "main"}, \
+        {"dataset": "https://example.org/boundaries", "container": "gemeinden"}
     answers(pipeline, [
+        # phase 3 format (per fingerprint): its property counts, its object class does not
         {"fingerprint": "fp-muni", "confidence": 0.95, "rationale": "Official municipality numbers.",
-         "objectClass": {"new": {"title": {"en": "Municipality"}, "closeMatch": ["http://schema.org/AdministrativeArea"]}},
+         "objectClass": {"new": {"title": {"en": "Person"}}},
          "property": {"new": {"title": {"en": "BFS municipality number"}, "closeMatch": ["http://schema.org/identifier"]}}},
-        {"fingerprint": "fp-kt", "confidence": 0.9,
-         "objectClass": {"new": {"title": {"en": "Municipality"}}},
+        {"fingerprint": "fp-date", "none": True},
+        # per table: the object class
+        {"table": pop, "fingerprint": "fp-muni", "objectClass": muni, "confidence": 0.95},
+        {"table": bnd, "fingerprint": "fp-muni", "objectClass": muni, "confidence": 0.95},
+        {"table": bnd, "fingerprint": "fp-kt", "confidence": 0.9, "objectClass": muni,
          "property": {"new": {"title": {"en": "canton"}}},
          "codeList": "https://example.org/mds/valuedomain/SEX"},             # contradicted by the values
-        {"fingerprint": "fp-pop", "confidence": 0.5,                          # below the threshold: candidate only
-         "objectClass": {"new": {"title": {"en": "Municipality"}}},
-         "property": {"new": {"title": {"en": "population"}}}},
-        {"fingerprint": "fp-date", "none": True},
+        {"table": pop, "fingerprint": "fp-pop", "confidence": 0.5,             # below the threshold: candidate only
+         "objectClass": muni, "property": {"new": {"title": {"en": "population"}}}},
     ])
     run_all(pipeline)
     links = links_by_slot(pipeline)
     reg = Registry.load(pipeline.registry_dir, pipeline.base_iri)
     a, b = links[slots[0]["iri"]], links[slots[2]["iri"]]
     assert a["dataElementConcept"] and a["dataElementConcept"] == b["dataElementConcept"]
-    assert len(reg.all("objectclasses")) == 1          # "Municipality" named by three answers, created once
+    assert [e["title"]["en"] for e in reg.all("objectclasses")] == ["Municipality"]   # created once; no Person
     assert a["dataElement"] == b["dataElement"]
     de = reg.get("dataelements", a["dataElement"])
     assert de["valueDomain"] == a["valueDomain"] and de["path"] == "http://schema.org/identifier"
@@ -229,9 +234,12 @@ def test_unanswered_fingerprints_become_requests(pipeline):
     write_slots(pipeline, slots_v1())
     run_all(pipeline)
     reqs = [json.loads(l) for l in (pipeline.out / "concept-requests.jsonl").read_text().splitlines()]
-    assert {r["fingerprint"] for r in reqs} == {s["fingerprint"] for s in slots_v1()}
-    muni = next(r for r in reqs if r["fingerprint"] == "fp-muni")
-    assert muni["slot"]["name"] == "BFS_Nr" and muni["slot"]["valueDomain"]
+    assert len(reqs) == 3                                       # one per table
+    assert {c["fingerprint"] for r in reqs for c in r["ask"]} == {s["fingerprint"] for s in slots_v1()}
+    bnd = next(r for r in reqs if r["table"]["dataset"] == "https://example.org/boundaries")
+    assert [c["name"] for c in bnd["columns"]] == ["BFS_Nr", "Kanton"]          # the whole table
+    muni = next(c for c in bnd["ask"] if c["fingerprint"] == "fp-muni")
+    assert muni["name"] == "BFS_Nr" and muni["valueDomain"] and "nearestProperties" in muni
 
 
 def test_embedding_index_finds_near_labels():
@@ -298,9 +306,12 @@ class FakeClient:
         self.messages = self
 
     def create(self, **kw):
+        """Answers the asked columns it has a reply for; refuses a table with none."""
         self.requests.append(kw)
-        fp = json.loads(kw["messages"][0]["content"])["fingerprint"]
-        return self.replies.get(fp, FakeResponse({}, stop="refusal"))
+        req = json.loads(kw["messages"][0]["content"])
+        cols = [{"fingerprint": c["fingerprint"], **self.replies[c["fingerprint"]]}
+                for c in req["ask"] if c["fingerprint"] in self.replies]
+        return FakeResponse({"columns": cols}) if cols else FakeResponse({}, stop="refusal")
 
 
 def part(title=None, iri=None):
@@ -314,11 +325,10 @@ def test_claude_model_with_a_fake_client(pipeline):
     confirm.run(pipeline)
     linkvalues.run(pipeline)
     client = FakeClient({
-        "fp-muni": FakeResponse({"none": False, "objectClass": part("Municipality"),
-                                 "property": part("BFS municipality number"), "codeList": None,
-                                 "confidence": 0.93, "rationale": "Official numbers."}),
-        "fp-date": FakeResponse({"none": True, "objectClass": part(), "property": part(), "codeList": None,
-                                 "confidence": 0.9, "rationale": "Layout column."}),
+        "fp-muni": {"none": False, "objectClass": part("Municipality"), "property": part("BFS municipality number"),
+                    "codeList": None, "confidence": 0.93, "rationale": "Official numbers."},
+        "fp-date": {"none": True, "objectClass": part(), "property": part(), "codeList": None,
+                    "confidence": 0.9, "rationale": "Layout column."},
     })
     model = concepts.ClaudeModel(client=client)
     reg = Registry.load(pipeline.registry_dir, pipeline.base_iri)
@@ -326,8 +336,10 @@ def test_claude_model_with_a_fake_client(pipeline):
     links = {r["slot"]: r for r in linker.link(slots, linkvalues.read(pipeline))}
     assert links[slots[0]["iri"]]["dataElementConcept"] == links[slots[2]["iri"]]["dataElementConcept"]
     assert {"concept": "none"} in links[slots[5]["iri"]]["notes"]
-    # one call per fingerprint; refusals stay requests
-    assert model.calls == 5 and len(linker.requests) == 3
+    # one call per table; what is not answered stays a request (population: Einwohner; boundaries: Kanton;
+    # buildings: GWR_EGID)
+    assert model.calls == 3 and len(linker.requests) == 3
+    assert sorted(c["name"] for r in linker.requests for c in r["ask"]) == ["Einwohner", "GWR_EGID", "Kanton"]
     req = client.requests[0]
     assert req["output_config"]["format"]["schema"] == concepts.ANSWER_SCHEMA and req["fallbacks"] == "default"
 
@@ -337,3 +349,147 @@ def test_claude_model_needs_explicit_permission(pipeline):
     pipeline.values["CONCEPT_MODEL"] = "claude"
     with pytest.raises(SystemExit, match="CONCEPT_ALLOW_HOSTED"):
         concepts.model_from_config(pipeline)
+
+
+# --- phase 3b: object class per column in its table ----------------------------------------
+
+PERSONS = "https://example.org/persons"
+
+
+def persons_table():
+    """A denormalised table: persons with their municipality of residence and that municipality's name."""
+    st = "https://example.org/sp"
+    slots = [slot("person_id", [f"P{i}" for i in range(6)], dataset=PERSONS, type_="string", fingerprint="fp-pid",
+                  structure=st),
+             slot("wohngemeinde_bfs", MUNI_VALUES, dataset=PERSONS, fingerprint="fp-wg", structure=st),
+             slot("gemeinde_name", ["Zürich", "Bern", "Rapperswil-Jona", "Le Chenit", "Uster", "Biel/Bienne"],
+                  dataset=PERSONS, type_="string", fingerprint="fp-gn", structure=st),
+             slot("alter", ["23", "45", "67", "31", "52"], dataset=PERSONS, fingerprint="fp-age", structure=st)]
+    record = {"iri": slots[0]["container"]["iri"], "path": "main",
+              "dataset": {"iri": PERSONS, "title": {"de": "Personen", "fr": "Personnes"},
+                          "description": {"de": "Personen und ihre Wohngemeinde."}},
+              "distribution": {"iri": PERSONS + "/dist", "title": "Personen CSV"},
+              "columns": [{"name": s["name"], "datatype": s["datatype"], "pattern": None} for s in slots],
+              "candidateKeys": ["person_id"],
+              "dependencies": [{"determinant": "wohngemeinde_bfs", "dependents": ["gemeinde_name"], "rows": 600,
+                                "distinct": 6},
+                               {"determinant": "gemeinde_name", "dependents": ["wohngemeinde_bfs"], "rows": 600,
+                                "distinct": 6}]}
+    return slots, record
+
+
+def write_containers(cfg, records):
+    with open(cfg.raw / "containers.jsonl", "w") as f:
+        for r in records:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+
+def new(title):
+    return {"new": {"title": {"en": title}}}
+
+
+class CountingModel:
+    """Answers every asked column from a table → {fingerprint: (object class, property)} map."""
+
+    def __init__(self, plan):
+        self.plan, self.calls, self.requests = plan, 0, []
+
+    def answer(self, request):
+        self.calls += 1
+        self.requests.append(request)
+        key = (request["table"]["dataset"], request["table"]["container"])
+        cols = []
+        for c in request["ask"]:
+            oc, prop = self.plan.get(key, {}).get(c["fingerprint"], ("Thing", c["name"]))
+            cols.append({"fingerprint": c["fingerprint"], "objectClass": new(oc), "property": new(prop),
+                         "codeList": None, "confidence": 0.9, "rationale": f"{c['name']}: {prop} of {oc}"})
+        return {"columns": cols}
+
+
+def link_with(pipeline, slots, model):
+    seed.run(pipeline)
+    confirm.run(pipeline)
+    linkvalues.run(pipeline)
+    reg = Registry.load(pipeline.registry_dir, pipeline.base_iri)
+    linker = concepts.Linker(pipeline, reg, model)
+    from cmatch import slots as slotio
+    links = linker.link(slots, linkvalues.read(pipeline), slotio.load_containers(pipeline))
+    return {r["slot"]: r for r in links}, reg, linker
+
+
+def object_class_of(reg, rec):
+    dec = reg.get("dataelementconcepts", rec["dataElementConcept"])
+    return reg.get("objectclasses", dec["objectClass"])["title"]["en"]
+
+
+def test_denormalised_table_gets_two_object_classes(pipeline):
+    slots, record = persons_table()
+    write_slots(pipeline, slots)
+    write_containers(pipeline, [record])
+    model = CountingModel({(PERSONS, "main"): {
+        "fp-pid": ("Person", "identifier"), "fp-wg": ("Person", "municipality of residence"),
+        "fp-gn": ("Municipality", "name"), "fp-age": ("Person", "age")}})
+    links, reg, _ = link_with(pipeline, slots, model)
+    oc = {s["name"]: object_class_of(reg, links[s["iri"]]) for s in slots}
+    assert oc == {"person_id": "Person", "wohngemeinde_bfs": "Person", "gemeinde_name": "Municipality",
+                  "alter": "Person"}
+    # the model saw the whole table once, with dataset context and dependencies
+    [req] = model.requests
+    assert req["datasetContext"]["title"] == {"de": "Personen", "fr": "Personnes"}
+    assert req["distributionTitle"] == "Personen CSV" and req["candidateKeys"] == ["person_id"]
+    assert req["dependencies"][0]["determinant"] == "wohngemeinde_bfs"
+    assert [c["name"] for c in req["ask"]] == [s["name"] for s in slots]
+    # the table's own entity: gemeinde_name (another entity's attribute) does not vote
+    main = concepts.main_object_classes(list(links.values()), slots, reg, {record["iri"]: record})
+    assert reg.get("objectclasses", main[record["iri"]])["title"]["en"] == "Person"
+
+
+def test_same_geometry_column_in_two_tables_gets_different_object_classes(pipeline):
+    geom = dict(type_="string", datatype="http://www.opengis.net/ont/geosparql#wktLiteral", fingerprint="fp-geom")
+    a = slot("geom", [], dataset="https://example.org/buildings", structure="https://example.org/s5", **geom)
+    b = slot("geom", [], dataset="https://example.org/groundwater", structure="https://example.org/s6", **geom)
+    write_slots(pipeline, [a, b])
+    model = CountingModel({("https://example.org/buildings", "main"): {"fp-geom": ("Building", "geometry")},
+                           ("https://example.org/groundwater", "main"): {"fp-geom": ("Groundwater body", "geometry")}})
+    links, reg, _ = link_with(pipeline, [a, b], model)
+    assert object_class_of(reg, links[a["iri"]]) == "Building"
+    assert object_class_of(reg, links[b["iri"]]) == "Groundwater body"
+    pa = reg.get("dataelementconcepts", links[a["iri"]]["dataElementConcept"])["property"]
+    pb = reg.get("dataelementconcepts", links[b["iri"]]["dataElementConcept"])["property"]
+    assert pa == pb                                    # one property, two object classes
+    # the second table only asked for the object class: the property was known from the first
+    assert "knownProperty" in model.requests[1]["ask"][0]
+
+
+def test_edited_dataset_description_makes_no_model_call(pipeline):
+    slots, record = persons_table()
+    write_slots(pipeline, slots)
+    write_containers(pipeline, [record])
+    first = CountingModel({})
+    link_with(pipeline, slots, first)
+    assert first.calls == 1
+    record["dataset"]["description"] = {"de": "Neu beschrieben.", "en": "Described anew."}
+    record["distribution"]["title"] = "Personen 2026"
+    write_containers(pipeline, [record])
+    again = CountingModel({})
+    links, _, linker = link_with(pipeline, slots, again)
+    assert again.calls == 0 and linker.requests == []
+    assert all(links[s["iri"]].get("dataElementConcept") for s in slots)
+
+
+def test_code_column_and_label_column_of_one_list_share_the_value_domain(pipeline):
+    from conftest import CANTON_NAMES
+    codes = list(CANTON_NAMES)[:10]
+    a = slot("kanton_kz", codes, type_="string", fingerprint="fp-kz", structure="https://example.org/s7")
+    b = slot("kanton_name", [CANTON_NAMES[c][0] for c in codes], type_="string", fingerprint="fp-kn",
+             structure="https://example.org/s7")
+    write_slots(pipeline, [a, b])
+    run_all(pipeline)
+    links = links_by_slot(pipeline)
+    assert links[a["iri"]]["valueDomain"] == links[b["iri"]]["valueDomain"]
+    assert links[a["iri"]]["valueDomain"].endswith("/valuedomain/GDE")
+    how = {s["name"]: next(m for m in links[s["iri"]]["matches"] if m["kind"] == "valueDomain")["evidence"]
+           for s in (a, b)}
+    assert how["kanton_kz"]["matched"] == "notation" and how["kanton_name"]["matched"] == "label"
+    g = output_graph(pipeline)
+    assert {str(o) for o in g.objects(None, AP.matchedOn)} >= {"notation", "label"}

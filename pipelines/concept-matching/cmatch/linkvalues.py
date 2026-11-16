@@ -15,9 +15,8 @@ from collections import defaultdict
 
 from . import confirm, described, identifiers
 from . import slots as slotio
-from .codematch import Thresholds, match_all, matchable
+from .codematch import Thresholds, distinct_values, match_all, matchable
 from .config import Config
-from .lindas import norm
 from .log import log
 from .registry import COMPLETED, Registry, id_segment
 
@@ -53,6 +52,15 @@ def described_vd(reg: Registry, slot: dict) -> str | None:
     return iri
 
 
+def code_evidence(h) -> dict:
+    """Evidence of a code-list hit: overlap figures, and what matched (notation, label, languages)."""
+    ev = {"method": "code-overlap", "containment": h.containment, "coverage": h.coverage, "level": h.level,
+          "matched": h.matched}
+    if h.languages:
+        ev["languages"] = list(h.languages)
+    return ev
+
+
 def link(cfg: Config, slots: list[dict], reg: Registry, confirmations: list[dict]) -> list[dict]:
     t = Thresholds.from_config(cfg)
     run = run_iri(cfg)
@@ -81,8 +89,7 @@ def link(cfg: Config, slots: list[dict], reg: Registry, confirmations: list[dict
                     vd = vd_of_scheme.get(h.scheme)
                     if vd:
                         cands.append({"entry": vd, "kind": "valueDomain", "rank": rank, "score": h.containment,
-                                      "evidence": {"method": "code-overlap", "containment": h.containment,
-                                                   "coverage": h.coverage, "level": h.level},
+                                      "evidence": code_evidence(h),
                                       "run": run})
                 if res.reason:
                     rec["codeReason"] = res.reason
@@ -102,9 +109,7 @@ def link(cfg: Config, slots: list[dict], reg: Registry, confirmations: list[dict
             auto = None
             if res and res.automatic and vd_of_scheme.get(res.automatic.scheme):
                 h = res.automatic
-                auto = {"entry": vd_of_scheme[h.scheme], "score": h.containment,
-                        "evidence": {"method": "code-overlap", "containment": h.containment, "coverage": h.coverage,
-                                     "level": h.level}}
+                auto = {"entry": vd_of_scheme[h.scheme], "score": h.containment, "evidence": code_evidence(h)}
             elif ids:
                 auto = {"entry": reg.iri("valuedomains", "identifier", ids[0][0]), "score": ids[0][1],
                         "evidence": {"method": "id-validator"}}
@@ -150,9 +155,10 @@ def _drift_scores(cfg: Config, persons: dict, slots: list[dict], reg: Registry) 
     try:
         out = {}
         for iri, entry, scheme, sample in pairs:
-            values = {norm(v) for v in sample} - {None}
-            codes = {r[0] for r in con.execute("SELECT DISTINCT norm FROM codes WHERE scheme = ?", [scheme]).fetchall()}
-            out[(iri, entry)] = len(values & codes) / len(values) if values else 0.0
+            values = distinct_values(sample)        # a value counts if it matches as notation or as label
+            codes = set(con.execute("SELECT DISTINCT kind, norm FROM codes WHERE scheme = ?", [scheme]).fetchall())
+            hit = sum(1 for forms in values.values() if any(f in codes for f in forms))
+            out[(iri, entry)] = hit / len(values) if values else 0.0
         return out
     finally:
         con.close()

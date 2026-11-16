@@ -32,6 +32,10 @@ def evidence(g: Graph, node, ev: dict) -> None:
             g.add((e, AP[key], Literal(round(float(ev[key]), 4), datatype=XSD.decimal)))
     if ev.get("level"):
         g.add((e, AP.level, URIRef(ev["level"])))
+    if ev.get("matched"):
+        g.add((e, AP.matchedOn, Literal(ev["matched"])))
+    for lang in ev.get("languages") or []:
+        g.add((e, AP.labelLanguage, Literal(lang)))
     if ev.get("rationale"):
         g.add((e, AP.rationale, Literal(ev["rationale"])))
 

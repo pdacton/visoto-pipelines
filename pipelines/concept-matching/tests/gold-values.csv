@@ -130,3 +130,15 @@ https://opendata.swiss/set/data/ac730d03-1840-4f64-bc89-9f06d2491e25,main/conten
 https://opendata.swiss/set/data/c2574a21-2def-4fd0-8529-a7bd2f6ddede,ms_schongebiete,fischereiregelung,described,
 https://opendata.swiss/set/data/imad_bases_equipes,main,E,described,
 https://opendata.swiss/set/data/ac730d03-1840-4f64-bc89-9f06d2491e25,main/contents/node/layer/node/dimension/node,Default,described,
+https://opendata.swiss/set/data/5d67bca4-e9b3-4976-afd4-b21ce2214a22-kanton-zug,main,gemeinde,DV_KT_BEZ_GDE_SNAP,labels (municipality names)
+https://opendata.swiss/set/data/12750-kanton-basel-landschaft,main,entity_name,DV_KT_BEZ_GDE_SNAP,labels; codes of the same list in entity_id
+https://opendata.swiss/set/data/12750-kanton-basel-landschaft,main,entity_id,DV_KT_BEZ_GDE_SNAP,codes; labels of the same list in entity_name
+https://opendata.swiss/set/data/sk-stat-129-kanton-thurgau,main,gemeinde_name,DV_KT_BEZ_GDE_SNAP,labels; codes in bfs_nr_gemeinde
+https://opendata.swiss/set/data/sk-stat-129-kanton-thurgau,main,bfs_nr_gemeinde,DV_KT_BEZ_GDE_SNAP,codes; labels in gemeinde_name
+https://opendata.swiss/set/data/haltestelle-haltekante-schweizerische-bundesbahnen-sbb,main,municipalityname,DV_KT_BEZ_GDE_SNAP,labels
+https://opendata.swiss/set/data/haltestelle-haltekante-schweizerische-bundesbahnen-sbb,main,cantonabbreviation,DV_KT_BEZ_GDE_SNAP,codes (also labels of SDBB_LOKATIONSCODES); names in cantonname
+https://opendata.swiss/set/data/haltestelle-haltekante-schweizerische-bundesbahnen-sbb,main,cantonname,DV_KT_BEZ_GDE_SNAP,"labels, tie with HGDE_KT: decided by the concept step; codes in cantonabbreviation"
+https://opendata.swiss/set/data/programme_analyses_srg-ssr_radios-bundesamt-fur-kommunikation-bakom,rsi_rtr_programmanalyse_2022,Quellenzugang 1,described,Ja/Nein: generic labels never link on their own
+https://opendata.swiss/set/data/programme_analyses_srg-ssr_radios-bundesamt-fur-kommunikation-bakom,srg_radioprogrammanalyse_2023,Quellenzugang 1,described,Ja/Nein: generic labels never link on their own
+https://opendata.swiss/set/data/programme_analyses_srg-ssr_radios-bundesamt-fur-kommunikation-bakom,srg_radioprogrammanalyse_2024,Quellenzugang 1,described,Ja/Nein: generic labels never link on their own
+https://opendata.swiss/set/data/perron-schweizerische-bundesbahnen-sbb,main,z_schienenfrei,described,ja/nein: generic labels

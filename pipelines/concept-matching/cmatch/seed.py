@@ -19,7 +19,7 @@ LANGS = ("en", "de", "fr", "it")
 
 def codelist_entries(reg: Registry, con) -> list[dict]:
     rows = con.execute("SELECT scheme, list, id, version, title_en, title_de, title_fr, title_it, "
-                       "(SELECT COUNT(*) FROM codes c WHERE c.scheme = s.scheme) FROM schemes s "
+                       "(SELECT COUNT(*) FROM codes c WHERE c.scheme = s.scheme AND c.kind = 'notation') FROM schemes s "
                        "ORDER BY id, version NULLS FIRST").fetchall()
     out = []
     for scheme, lst, ident, version, *titles, n in rows:

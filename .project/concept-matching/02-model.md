@@ -57,6 +57,15 @@ representation get the same entry without any lookup. The IRI is built from
 the properties, for example `…/mds/valuedomain/described/date-iso`,
 `…/described/decimal-CHF`, `…/described/geo-MultiPolygon-EPSG2056`.
 
+A string slot with a specific pattern (from auto-profiling) gets its own
+entry, `…/described/string-pattern-<hash>` with the pattern as `sh:pattern`,
+so columns with the same shape of in-house code or identifier meet. Specific
+means at least one fixed literal character other than a space: a prefix
+(`CHE-`, `A-`) or a separator (`.`, `/`, `-`). `^A\-\d{4}$` qualifies;
+`^\d{4}$` and `^[A-Z]{2}$` stay "Text", because digit-only and letter-only
+shapes join unrelated codes, and code lists and identifier rules catch the
+meaningful ones first.
+
 ### Concepts
 
 Created entries get an opaque identifier (labels change, IRIs must not), the
@@ -77,12 +86,24 @@ property, and nothing else. Only object classes and properties are looked up
 and created; the concept's identifier is derived from its two parts, and a
 data element's from its concept and value domain, so neither needs a lookup.
 
-The object class is the kind of thing the record describes, not the kind of
-thing a value refers to. A column `Wohngemeinde` in a table of persons gives
-the object class Person and the property "municipality of residence"; the
-municipality itself appears in the value domain (municipality codes). So the
-slots of one container normally share their object class, which is also the
-container's `ap:mainObjectClass`.
+A column's object class is the entity whose key determines the column
+(decided 2026-11-14):
+
+- A column that depends only on the row key belongs to the table's own
+  entity.
+- A key that points to another entity belongs to the **referencing** entity:
+  `wohngemeinde_bfs` in a table of persons is Person + "municipality of
+  residence"; the municipality itself is in the value domain (municipality
+  codes).
+- Columns that depend on that key belong to the **referenced** entity:
+  `gemeinde_name` next to it is Municipality + "name".
+
+So a denormalised table holds several object classes, and the same column in
+two tables can have different ones (a `geom` column is the geometry of
+whatever the rows are). Auto-profiling's candidate keys and functional
+dependencies are the evidence. A container's `ap:mainObjectClass` is the
+object class most of its slots share, leaving out the slots that depend on a
+determinant other than a candidate key.
 
 Concepts are specific: "municipality of residence" and "municipality of work"
 are two properties and so two concepts. Slots can still be compared more
@@ -198,23 +219,55 @@ format, distribution removed). That is accepted:
   concept step, which sees the column's name and context.
 - Among versions with equal containment the slot links to the list, not to a
   version.
+- **Codes and labels.** A data owner may publish a code, its label, or both.
+  The index also holds every code's labels (`skos:prefLabel`, de, fr, it, en,
+  rm), and a value counts when it matches a notation or a label (labels
+  compared without case, accents and extra whitespace). A column of canton
+  names and a column of canton abbreviations link to the same value domain;
+  the evidence says what matched (`ap:matchedOn` notation, label or both;
+  `ap:labelLanguage`). The same rules decide label hits.
+- **Generic labels** ("Ja", "Nein", "Unbekannt", "Andere" in every language)
+  do not link on their own: they count towards containment, but a list links
+  automatically only when at least 6 matched values are notations or other
+  labels (reason "generic-labels"). A label is generic when it occurs in at
+  least 5 lists and the levels it occurs in have at most 20 codes (median).
+  Place names occur in as many lists ("Zürich" in 20) but in large levels;
+  the few the rule catches ("Ticino", also a region in small lists) still
+  count.
+- **Notations beat labels.** At equal containment a hit on notations ranks
+  first, and a list hit only through its labels is no rival to one hit on
+  notations: canton abbreviations are the codes of the canton list and also
+  the labels of a location-code list.
 
 ## Finding or creating a concept
 
-Per fingerprint:
+Per table (dataset + container), one model call for all its columns without
+an answer (in parts of 40 for wider tables):
 
-1. Describe the slot: name, label, container, neighbouring slots, datatype,
-   value sample, and its value domain if it has one.
-2. Look up the nearest existing object classes and properties by embedding
-   (local index of the registry's labels and definitions).
-3. The LLM names the slot's object class and property, each as an existing
-   entry (exact or close) or as a new one with label and definition; or
-   answers "no concept". In the same call it picks among ambiguous code-list
-   candidates. The data element concept follows by rule from the pair.
+1. Describe the whole table: the dataset's title, description and keywords
+   in every language, the distribution title, all columns with datatype and
+   pattern, candidate row keys and functional dependencies (auto-profiling's
+   `containers.jsonl`), and in detail each column to answer: value sample,
+   value domain, code-list candidates.
+2. Look up the nearest existing object classes (for the table) and
+   properties (per column) by embedding (local index of the registry's
+   labels and definitions).
+3. The LLM names each column's object class (by [the rule](#concepts)) and
+   property, each as an existing entry or as a new one with label and
+   definition; or answers "no concept". In the same call it picks among
+   ambiguous code-list candidates. The data element concept follows by rule
+   from the pair.
 4. A value check drops answers the data contradicts (values outside the
    chosen code list).
 5. New entries are written to `registry/` and are visible to the next lookup
    in the same run.
+
+Answers are cached in two places. The property, the code-list choice and
+"no concept" are cached by fingerprint (`cache/concept-answers.jsonl`). The
+object class is cached by fingerprint and table (`cache/object-class-answers.jsonl`),
+because it depends on the table. A column whose property is known is asked
+only for its object class. The dataset context is in no cache key, so an
+edited description causes no new call.
 
 The result depends on the order of processing, and the lookup will sometimes
 miss, so duplicates arise. They are merged later (pruning), with the replaced

@@ -1,4 +1,4 @@
-# Copied from metadata-swiss/mds-datamodel ontology/autoprofiling/autoprofiling-shapes.ttl (49d3436); edit it there, then copy.
+# Copied from metadata-swiss/mds-datamodel ontology/autoprofiling/autoprofiling-shapes.ttl (ebc116a); edit it there, then copy.
 # SHACL shapes for the auto-profiling vocabulary (ap:).
 # Validate a profiling output (with its distributions) against these shapes, e.g.
 #   pyshacl -s ap-shapes.ttl -e ap.ttl data.ttl
@@ -218,6 +218,8 @@ apsh:Evidence a sh:NodeShape ;
         [ sh:path ap:coverage ; sh:maxCount 1 ; sh:datatype xsd:decimal ;
           sh:minInclusive 0 ; sh:maxInclusive 1 ] ,
         [ sh:path ap:level ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
+        [ sh:path ap:matchedOn ; sh:maxCount 1 ; sh:in ( "notation" "label" "notation+label" ) ] ,
+        [ sh:path ap:labelLanguage ; sh:datatype xsd:string ] ,
         [ sh:path ap:rationale ; sh:maxCount 1 ] .
 
 # =====================================================================================

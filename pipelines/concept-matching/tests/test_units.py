@@ -3,7 +3,7 @@ import duckdb
 from cmatch import codematch, described, identifiers, lindas
 from cmatch.codematch import Thresholds
 from cmatch.registry import CANDIDATE, Registry, opaque_id
-from conftest import AGE, AGG, MUNI, SEX
+from conftest import AGE, AGG, MUNI, SEX, YESNO
 
 
 # --- lindas -----------------------------------------------------------------------------
@@ -38,8 +38,8 @@ class FakeLindas:
 def test_refresh_fetches_only_changed_lists(tmp_path):
     c = lindas.CONCEPT
     con = lindas.connect(tmp_path / "codes.duckdb")
-    fake = FakeLindas([c + "A", c + "B"], {c + "A": [("1", None)], c + "B": [("x", None)],
-                                           c + "B/version/2": [("x", None), ("y", None)]})
+    fake = FakeLindas([c + "A", c + "B"], {c + "A": [("1", None, None, None)], c + "B": [("x", None, "Iks", "de")],
+                                           c + "B/version/2": [("x", None, "Iks", "de"), ("x", None, "Ics", "fr"), ("y", None, None, None)]})
     lindas.refresh(con, fake)
     assert sorted(fake.fetched) == [c + "A", c + "B"]
     fake.fetched.clear()
@@ -48,7 +48,18 @@ def test_refresh_fetches_only_changed_lists(tmp_path):
     fake._schemes.append(c + "B/version/2")        # a new version: list B is fetched again, A is not
     lindas.refresh(con, fake)
     assert sorted(fake.fetched) == [c + "B", c + "B/version/2"]
-    assert con.execute("SELECT COUNT(*) FROM codes").fetchall()[0][0] == 4
+    assert con.execute("SELECT COUNT(*) FROM codes WHERE kind = 'notation'").fetchall()[0][0] == 4
+    labels = con.execute("SELECT scheme, notation, norm, lang FROM codes WHERE kind = 'label' ORDER BY ALL").fetchall()
+    assert labels == [(c + "B", "x", "iks", "de"), (c + "B/version/2", "x", "ics", "fr"),
+                      (c + "B/version/2", "x", "iks", "de")]
+
+
+def test_label_norm_and_value_forms():
+    assert lindas.label_norm("  Genève\t Stadt ") == "geneve stadt"
+    assert lindas.label_norm("ZÜRICH") == lindas.label_norm("Zurich") == "zurich"
+    assert lindas.label_norm("0261") is None                      # numbers are notations only
+    assert lindas.value_forms("BE") == [("notation", "BE"), ("label", "be")]
+    assert lindas.value_forms("0261") == [("notation", "261")]
 
 
 # --- identifiers ---------------------------------------------------------------------------
@@ -79,6 +90,19 @@ def test_described_keys():
     assert described.key({"datatype": xsd + "string", "unit": "Anzahl"})[0] == "string"   # not a QUDT unit
     assert described.key({"datatype": None}) is None
     assert described.key({"datatype": xsd + "string", "nested": True}) is None
+
+
+def test_pattern_value_domains_only_for_specific_shapes():
+    xsd = "http://www.w3.org/2001/XMLSchema#"
+    s = lambda p: described.key({"datatype": xsd + "string", "pattern": p})
+    a, b = s(r"^A\-\d{4}$"), s(r"^A\-\d{4}$")
+    assert a[0].startswith("string-pattern-") and a == b and a[1]["pattern"] == r"^A\-\d{4}$"
+    assert s(r"^CHE\-\d{3}\.\d{3}\.\d{3}$")[0] != a[0]
+    assert s(r"^\d{4} Basel$")[0].startswith("string-pattern-")      # a fixed word counts
+    for loose in (r"^\d{4}$", r"^[A-Z]{2}$", r"^\p{L}{4,6}$", r"^[A-Za-z]{3,9} \d{1,2}$", None):
+        assert s(loose)[0] == "string", loose                      # digits, letters and spaces only
+    # an integer column with a pattern is not a string value domain
+    assert described.key({"datatype": xsd + "integer", "pattern": r"^A\-\d$"})[0] == "integer"
 
 
 # --- code matching -------------------------------------------------------------------------
@@ -113,6 +137,47 @@ def test_few_values_and_ambiguity_keep_candidates(pipeline):
     assert {h.list for h in r.candidates if not h.dense} == {MUNI, AGG} and r.candidates[-1].list == AGE
     r = run_match(pipeline, {"c": ["261", "351", "371", "2196"]})["c"]
     assert r.automatic is None and r.reason == "few-values"
+
+
+def test_canton_names_and_abbreviations_link_to_the_same_list(pipeline):
+    from conftest import CANTON_NAMES
+    names = [de for de, _ in CANTON_NAMES.values()][:12]
+    mixed = [de for de, _ in list(CANTON_NAMES.values())[:6]] + [fr for _, fr in list(CANTON_NAMES.values())[6:12]]
+    r = run_match(pipeline, {"codes": list(CANTON_NAMES)[:12], "names": names, "mixed": mixed,
+                             "accents": ["GENEVE", "zürich", "Bâle-Ville", "neuchatel", "graubunden", "VAUD"]})
+    for fp in ("codes", "names", "mixed", "accents"):
+        assert r[fp].automatic and r[fp].automatic.list == MUNI and r[fp].automatic.level == MUNI + "/level_1", fp
+    assert r["codes"].automatic.matched == "notation" and r["codes"].automatic.languages == ()
+    assert r["names"].automatic.matched == "label" and "de" in r["names"].automatic.languages   # Uri is also fr
+    assert r["mixed"].automatic.languages == ("de", "fr")
+
+
+def test_a_label_only_hit_is_no_rival_to_a_notation_hit(pipeline):
+    """Canton abbreviations: codes of the canton level, and labels of another list (location codes)."""
+    import duckdb
+    from conftest import CANTONS
+    loc = lindas.CONCEPT + "LOC"
+    con = duckdb.connect(str(pipeline.codes_db))
+    con.execute("INSERT INTO schemes VALUES (?, ?, 'LOC', NULL, NULL, 'Locations', NULL, NULL, NULL)", [loc, loc])
+    for i, c in enumerate(CANTONS):
+        con.execute("INSERT INTO codes VALUES (?, ?, NULL, NULL, ?, ?, 'notation', NULL)", [loc, loc, f"X{i:03d}", f"X{i:03d}"])
+        con.execute("INSERT INTO codes VALUES (?, ?, NULL, NULL, ?, ?, 'label', 'de')", [loc, loc, f"X{i:03d}", c.lower()])
+    con.close()
+    r = run_match(pipeline, {"kt": CANTONS[:10]})["kt"]
+    assert r.automatic and r.automatic.list == MUNI and r.automatic.matched == "notation"
+    assert [h.list for h in r.candidates][:2] == [MUNI, loc]
+
+
+def test_generic_labels_never_match(pipeline):
+    from conftest import GENERIC
+    r = run_match(pipeline, {"answers": [l for _, l in GENERIC], "codes": [c for c, _ in GENERIC],
+                             "regions": ["Zürich", "Bern", "Luzern", "Uri", "Ja", "Unbekannt", "Schwyz"]})
+    # labels only generic: candidates, never an automatic link
+    assert r["answers"].automatic is None and r["answers"].reason == "generic-labels"
+    assert r["answers"].candidates[0].specific == 0
+    assert r["codes"].reason == "ambiguous"                     # the codes: five equal lists
+    # generic labels next to specific ones still count towards containment
+    assert r["regions"].candidates[0].list == MUNI and r["regions"].candidates[0].specific == 5
 
 
 def test_dense_range_and_sequences_are_never_automatic(pipeline):

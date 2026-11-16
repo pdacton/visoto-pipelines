@@ -3,13 +3,18 @@
 LINDAS graph https://lindas.admin.ch/fso/i14y holds ~340 lists and ~390 versions as
 skos:ConceptSchemes: a list (identity) at …/concept/{ID}, its versions at
 …/concept/{ID}/version/{V}. Every scheme has its own codes (skos:inScheme, skos:notation,
-xkos:level); together about 509k. They are matched locally, so only the wrappers go into
-visoto-qlever.
+xkos:level) and labels (skos:prefLabel in de, fr, it, en, rm); together about 509k codes and
+1.6M labels. They are matched locally, so only the wrappers go into visoto-qlever.
+
+The `codes` table holds one row per notation (kind "notation", norm by `norm`) and one per distinct
+label and language (kind "label", norm by `label_norm`): a data owner may publish a code, its label
+or both, and both reach the same list.
 
 Refreshed per list: a list is fetched again when the set of its schemes on LINDAS differs from
 the cached one (a new version also changes the identity's codes); `--force` refetches all.
 """
 import re
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 
 import duckdb
@@ -46,9 +51,10 @@ WHERE { GRAPH <%(graph)s> {
 CODES_QUERY = """
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX xkos: <http://rdf-vocabulary.ddialliance.org/xkos#>
-SELECT ?notation ?level WHERE {{ GRAPH <{graph}> {{
+SELECT ?notation ?level ?label WHERE {{ GRAPH <{graph}> {{
   ?c skos:inScheme <{scheme}> ; skos:notation ?notation .
   OPTIONAL {{ ?c xkos:level ?level }}
+  OPTIONAL {{ ?c skos:prefLabel ?label }}
 }} }}"""
 
 
@@ -62,6 +68,27 @@ def norm(value) -> str | None:
     if re.fullmatch(r"[+-]?\d+(\.0+)?", s):
         return str(int(float(s))) if len(s) < 16 else s.split(".")[0].lstrip("+").lstrip("0") or "0"
     return s.upper()
+
+
+def label_norm(value) -> str | None:
+    """A value as compared with code labels: accents removed, case folded, whitespace collapsed.
+    None without a letter (numbers are compared as notations only)."""
+    if value is None:
+        return None
+    s = unicodedata.normalize("NFKD", str(value))
+    s = "".join(c for c in s if not unicodedata.combining(c)).casefold()
+    s = re.sub(r"\s+", " ", s).strip()
+    return s if any(c.isalpha() for c in s) else None
+
+
+def value_forms(value) -> list[tuple[str, str]]:
+    """(kind, normalised form) under which a slot value is compared: as a notation and as a label."""
+    out = []
+    if (n := norm(value)) is not None:
+        out.append(("notation", n))
+    if (l := label_norm(value)) is not None:
+        out.append(("label", l))
+    return out
 
 
 def level_identity(level: str | None) -> str | None:
@@ -82,8 +109,14 @@ def connect(path) -> duckdb.DuckDBPyConnection:
     con.execute("""CREATE TABLE IF NOT EXISTS schemes (scheme VARCHAR PRIMARY KEY, list VARCHAR, id VARCHAR,
                    version VARCHAR, valid_from VARCHAR, title_en VARCHAR, title_de VARCHAR, title_fr VARCHAR,
                    title_it VARCHAR)""")
+    cols = {r[0] for r in con.execute("SELECT column_name FROM information_schema.columns "
+                                       "WHERE table_name = 'codes'").fetchall()}
+    if cols and "kind" not in cols:     # an index from before labels: rebuilt from scratch
+        con.execute("DROP TABLE codes")
+        con.execute("DELETE FROM schemes")
     con.execute("""CREATE TABLE IF NOT EXISTS codes (scheme VARCHAR, list VARCHAR, version VARCHAR,
-                   level VARCHAR, notation VARCHAR, norm VARCHAR)""")
+                   level VARCHAR, notation VARCHAR, norm VARCHAR, kind VARCHAR DEFAULT 'notation',
+                   lang VARCHAR)""")
     return con
 
 
@@ -93,12 +126,19 @@ class Lindas:
         self.http = httpx.Client(timeout=timeout, headers={"User-Agent": USER_AGENT,
                                                            "Accept": "application/sparql-results+json"})
 
-    def select(self, query: str) -> list[dict]:
+    def select(self, query: str, langs: bool = False) -> list[dict]:
+        """Rows as {var: value}; with langs also {var}@lang for literals with a language tag."""
         for attempt in range(3):
             try:
                 r = self.http.post(self.endpoint, data={"query": query})
                 r.raise_for_status()
-                return [{k: v["value"] for k, v in b.items()} for b in r.json()["results"]["bindings"]]
+                out = []
+                for b in r.json()["results"]["bindings"]:
+                    row = {k: v["value"] for k, v in b.items()}
+                    if langs:
+                        row |= {f"{k}@lang": v["xml:lang"] for k, v in b.items() if v.get("xml:lang")}
+                    out.append(row)
+                return out
             except (httpx.TransportError, httpx.HTTPStatusError):
                 if attempt == 2:
                     raise
@@ -115,9 +155,10 @@ class Lindas:
                             for l in LANGS}})
         return rows
 
-    def codes(self, scheme: str) -> list[tuple[str, str | None]]:
-        return [(b["notation"], b.get("level")) for b in
-                self.select(CODES_QUERY.format(graph=self.graph, scheme=scheme))]
+    def codes(self, scheme: str) -> list[tuple[str, str | None, str | None, str | None]]:
+        """(notation, level, label, language) rows; one per label, label None for a code without one."""
+        return [(b["notation"], b.get("level"), b.get("label"), b.get("label@lang"))
+                for b in self.select(CODES_QUERY.format(graph=self.graph, scheme=scheme), langs=True)]
 
 
 def refresh(con, lindas: Lindas, force: bool = False, workers: int = 4) -> dict:
@@ -142,10 +183,26 @@ def refresh(con, lindas: Lindas, force: bool = False, workers: int = 4) -> dict:
     rows = []
     with ThreadPoolExecutor(workers) as pool:
         for r, codes in zip(todo, pool.map(lambda r: lindas.codes(r["scheme"]), todo)):
-            rows += [(r["scheme"], r["list"], r["version"], level_identity(level), n, norm(n)) for n, level in codes]
-    bulk.insert(con, "codes", ["scheme", "list", "version", "level", "notation", "norm"], rows)
+            rows += code_rows(r, codes)
+    bulk.insert(con, "codes", ["scheme", "list", "version", "level", "notation", "norm", "kind", "lang"], rows)
     return {"schemes": len(remote), "lists": len(by_list), "refetched_lists": len(stale), "removed_lists": len(gone),
             "unchanged": len(cached & {r["scheme"] for r in remote}) if not force else 0}
+
+
+def code_rows(scheme: dict, codes: list[tuple]) -> list[tuple]:
+    """Index rows of one scheme: each notation once, each distinct (notation, label, language) once."""
+    seen, rows = set(), []
+    for notation, level, label, lang in codes:
+        level = level_identity(level)
+        base = (scheme["scheme"], scheme["list"], scheme["version"], level, notation)
+        if (notation, level) not in seen:
+            seen.add((notation, level))
+            rows.append((*base, norm(notation), "notation", None))
+        ln = label_norm(label)
+        if ln is not None and (notation, level, ln, lang) not in seen:
+            seen.add((notation, level, ln, lang))
+            rows.append((*base, ln, "label", lang))
+    return rows
 
 
 def run(cfg: Config, force: bool = False) -> None:

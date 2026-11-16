@@ -341,20 +341,20 @@ Auto-profiling results (2026-11-16, 100-dataset sample, re-profiled offline):
 
 Concept matching (`pipelines/concept-matching/`):
 
-- [ ] Write [the rule](#the-rule) into the prompt and into
+- [x] Write [the rule](#the-rule) into the prompt and into
   [02-model.md](02-model.md#concepts), replacing "the slots of one container
   normally share their object class". `ap:mainObjectClass` becomes the
   object class of the columns that depend on the row key (today: the
   majority of the container's slots).
-- [ ] Request: the model sees the whole table (all columns, dependencies,
+- [x] Request: the model sees the whole table (all columns, dependencies,
   dataset context, distribution title) and gives one answer per column.
-- [ ] Cache: property and code-list choice stay keyed by fingerprint. The
+- [x] Cache: property and code-list choice stay keyed by fingerprint. The
   object class is keyed by fingerprint plus table (dataset and container
   name, as in the re-attach key). Dataset context is not part of any key, so
   an edited description causes no new call.
-- [ ] Existing answers: properties are kept, object classes are asked again
+- [x] Existing answers: properties are kept, object classes are asked again
   under the rule.
-- [ ] Tests: a denormalised table gets two object classes (person with
+- [x] Tests: a denormalised table gets two object classes (person with
   `wohngemeinde_bfs` and `gemeinde_name`); two tables sharing a `geom`
   fingerprint get different object classes; a changed dataset description
   makes no model call.
@@ -362,22 +362,22 @@ Concept matching (`pipelines/concept-matching/`):
 Value domains (`pipelines/concept-matching/`, stages `codes` and
 `link-values`, no LLM):
 
-- [ ] Patterns: the rule for described value domains uses the slot's pattern
+- [x] Patterns: the rule for described value domains uses the slot's pattern
   for strings, so two string columns with the same specific shape reach the
   same entry and free text stays "Text".
-- [ ] Labels and codes: the code index also holds each code's labels
+- [x] Labels and codes: the code index also holds each code's labels
   (`skos:prefLabel`, all languages). A slot's values are compared with the
   notations and with the labels, normalised for case, accents and
   whitespace. A column of codes and a column of labels of the same list link
   to the same value domain; the evidence records what matched (notation or
   label, and the language).
-- [ ] The rules for an automatic link (containment, distinct values, lead
+- [x] The rules for an automatic link (containment, distinct values, lead
   over the next list) apply to label matches as well. Generic labels ("Ja",
   "Nein", "Total", "Andere") occur in many lists and must not link on their
   own.
-- [ ] Vocabulary (`metadata-swiss`): a term on `ap:Evidence` for what
+- [x] Vocabulary (`metadata-swiss`): a term on `ap:Evidence` for what
   matched.
-- [ ] Gold set: cases with labels, and with a code column and a label column
+- [x] Gold set: cases with labels, and with a code column and a label column
   of the same list in one table.
 
 Done when, on the 100-dataset sample: no `geom` column carries the object
