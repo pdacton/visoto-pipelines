@@ -10,7 +10,7 @@ every slot to it.
 | 1 | Registry seed: code-list and identifier value domains |
 | 2 | Slots linked to value domains: technical comparison works |
 | 3 | Concepts found or created per slot: semantic comparison works |
-| 3b | Revision after review: object class per column in its table, with table and dataset context; patterns; labels and codes (open) |
+| 3b | Revision after review: object class per column in its table, with table and dataset context; patterns; labels and codes (done 2026-11-16) |
 | 4 | Operation: thresholds, review queue, reruns |
 
 ## Phase 0: Vocabulary and auto-profiling prerequisites
@@ -241,7 +241,7 @@ triples, valid.
 
 ## Phase 3b: Object class per column in its table (2026-11-14)
 
-Status: planned, nothing implemented. Revises phase 3 after a review of the
+Status: done 2026-11-16. Revises phase 3 after a review of the
 run on the 100-dataset sample.
 
 ### Why
@@ -379,6 +379,35 @@ Value domains (`pipelines/concept-matching/`, stages `codes` and
   matched.
 - [x] Gold set: cases with labels, and with a code column and a label column
   of the same list in one table.
+
+Concept-matching results (2026-11-16, 100-dataset sample):
+
+- Object classes asked again for 3,852 columns in 518 tables (346 groups of
+  identical tables), answered in-session (`answers/tables-0*.jsonl`, model
+  `claude-code-session`); properties kept from phase 3. Registry reset once:
+  211 object classes, 1,418 data element concepts, 990 data elements;
+  2,582 slots linked to a concept (confidence at least 0.8).
+- A table is dataset + container + distributions: dataset + container
+  merged the `main` tables of different distributions (found on the run).
+- Labels: 13 more automatic code-list links (municipality names, all five
+  languages). Generic labels count but do not link on their own (excluding
+  them dropped "Ticino"); a label-only hit is no rival to a notation hit
+  (canton abbreviations are labels of `SDBB_LOKATIONSCODES`).
+- Pattern value domains: 141, 21 shared by more than one dataset, most of
+  them GML feature identifiers of two publications of the same layer.
+- Gold values: precision 1.00, recall 0.91 (21 of 23, 12 label rows added).
+  Gold pairs: precision 1.00, recall 0.43.
+- 103 geometry columns stay candidates: their phase-3 property answers
+  have confidence 0.75.
+
+Done criteria, all met: "Agglomeration programme measure" remains only on
+the 4 layers of its own dataset (was 50 `geom` columns in 21 datasets);
+`gemeinde_name` in the Thurgau municipal-finance table is Municipality +
+"name", the ratios are "Municipal finance statement"; a rerun without a model
+(`CONCEPT_MODEL=none`) reproduces every link from the caches; `cantonname`
+and `cantonabbreviation` (SBB stops) link to `DV_KT_BEZ_GDE_SNAP` (names by
+label; the tie with `HGDE_KT` decided by the concept step); the report lists
+the shared pattern value domains.
 
 Done when, on the 100-dataset sample: no `geom` column carries the object
 class of another table's entity; in the municipal-finance table
