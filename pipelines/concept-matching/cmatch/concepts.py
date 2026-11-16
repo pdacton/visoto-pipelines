@@ -100,14 +100,20 @@ class NoModel:
         return None
 
 
-def table_key(dataset: str, container: str) -> str:
-    return f"{dataset}|{container}"
+def table_key(dataset: str, container: str, distributions) -> str:
+    """A table: the re-attach key without the source name. Container paths repeat across the structures
+    of one dataset (every CSV has a `main`), so the distributions are part of it."""
+    return f"{dataset}|{container}|{','.join(sorted(distributions or []))}"
+
+
+def table_of(t: dict) -> str:
+    return table_key(t["dataset"], t["container"], t.get("distributions"))
 
 
 class AnswersModel:
     """Answers from answers/*.jsonl, written by a person or by a model run outside this pipeline.
 
-    A line with a "table" ({"dataset", "container"}) answers one column of that table: its object class,
+    A line with a "table" ({"dataset", "container", "distributions"}) answers one column of that table: its object class,
     and its property unless the fingerprint has one already. A line without "table" (phase 3 format,
     keyed by fingerprint) gives the property, code-list choice or "none"; its object class is ignored."""
 
@@ -118,13 +124,12 @@ class AnswersModel:
                 if line.strip():
                     a = json.loads(line)
                     if a.get("table"):
-                        t = a["table"]
-                        self.by_table[(table_key(t["dataset"], t["container"]), a["fingerprint"])] = a
+                        self.by_table[(table_of(a["table"]), a["fingerprint"])] = a
                     else:
                         self.by_fp[a["fingerprint"]] = a
 
     def answer(self, request: dict) -> dict | None:
-        key = table_key(request["table"]["dataset"], request["table"]["container"])
+        key = table_of(request["table"])
         out = []
         for col in request["ask"]:
             fp = col["fingerprint"]
@@ -295,9 +300,10 @@ def entry_brief(e: dict, score: float) -> dict:
 class Table:
     """One table (dataset + container) of the input: its slots and auto-profiling's container record."""
 
-    def __init__(self, dataset: str, container: str, slots: list[dict], record: dict | None):
-        self.dataset, self.container, self.slots = dataset, container, slots
-        self.key = table_key(dataset, container)
+    def __init__(self, dataset: str, container: str, distributions: list[str], slots: list[dict],
+                 record: dict | None):
+        self.dataset, self.container, self.distributions, self.slots = dataset, container, distributions, slots
+        self.key = table_key(dataset, container, distributions)
         self.record = record or {}
 
     def label(self) -> str:
@@ -322,7 +328,7 @@ class Table:
 
     def describe(self, value_domain=None) -> dict:
         ds = self.record.get("dataset") or {}
-        return {"table": {"dataset": self.dataset, "container": self.container},
+        return {"table": self.ident(),
                 "datasetContext": {k: ds[k] for k in ("title", "description", "keywords", "themes") if ds.get(k)},
                 "distributionTitle": (self.record.get("distribution") or {}).get("title"),
                 "label": self.label(), "rowCount": self.record.get("rowCount"),
@@ -331,6 +337,9 @@ class Table:
                 "dependencies": [{"determinant": d["determinant"], "dependents": d["dependents"],
                                   "rows": d.get("rows"), "distinct": d.get("distinct")}
                                  for d in self.record.get("dependencies") or []]}
+
+    def ident(self) -> dict:
+        return {"dataset": self.dataset, "container": self.container, "distributions": self.distributions}
 
     def lookup_text(self) -> str:
         ds = self.record.get("dataset") or {}
@@ -349,9 +358,9 @@ def tables_of(slots: list[dict], containers: dict[str, dict]) -> list[Table]:
     groups: dict[tuple, list] = {}
     for s in slots:
         dataset, container, _ = slotio.key_of(s)
-        groups.setdefault((dataset, container), []).append(s)
-    tables = [Table(d, c, ss, containers.get((ss[0].get("container") or {}).get("iri")))
-              for (d, c), ss in groups.items()]
+        groups.setdefault((dataset, container, tuple(sorted(s["key"]["distributions"]))), []).append(s)
+    tables = [Table(d, c, list(ds), ss, containers.get((ss[0].get("container") or {}).get("iri")))
+              for (d, c, ds), ss in groups.items()]
     return sorted(tables, key=lambda t: (-len(t.slots), t.key))
 
 
@@ -367,8 +376,7 @@ class Linker:
         self.prop_path = cfg.cache / "concept-answers.jsonl"
         self.oc_path = cfg.cache / "object-class-answers.jsonl"
         self.props = {a["fingerprint"]: a for a in self._read(self.prop_path)}
-        self.ocs = {(table_key(a["table"]["dataset"], a["table"]["container"]), a["fingerprint"]): a
-                    for a in self._read(self.oc_path)}
+        self.ocs = {(table_of(a["table"]), a["fingerprint"]): a for a in self._read(self.oc_path)}
         self.requests: list[dict] = []
         self.calls = 0
         self.run = linkvalues.run_iri(cfg)
@@ -438,7 +446,7 @@ class Linker:
             self.props[fp] = {**self.props[fp], "codeList": a["codeList"]}
             self._append(self.prop_path, self.props[fp])
         if a.get("objectClass") and not a.get("none") and (table.key, fp) not in self.ocs:
-            oc = {"fingerprint": fp, "table": {"dataset": table.dataset, "container": table.container},
+            oc = {"fingerprint": fp, "table": table.ident(),
                   "objectClass": a["objectClass"], "confidence": a.get("confidence"),
                   "rationale": a.get("rationale"), "model": a.get("model")}
             self.ocs[(table.key, fp)] = oc

@@ -180,8 +180,10 @@ def test_concepts_from_answers_and_rerun_creates_nothing(pipeline):
     slots = slots_v1()
     write_slots(pipeline, slots)
     muni = {"new": {"title": {"en": "Municipality"}, "closeMatch": ["http://schema.org/AdministrativeArea"]}}
-    pop, bnd = {"dataset": "https://example.org/population", "container": "main"}, \
-        {"dataset": "https://example.org/boundaries", "container": "gemeinden"}
+    pop = {"dataset": "https://example.org/population", "container": "main",
+           "distributions": ["https://example.org/population/dist"]}
+    bnd = {"dataset": "https://example.org/boundaries", "container": "gemeinden",
+           "distributions": ["https://example.org/boundaries/dist"]}
     answers(pipeline, [
         # phase 3 format (per fingerprint): its property counts, its object class does not
         {"fingerprint": "fp-muni", "confidence": 0.95, "rationale": "Official municipality numbers.",
@@ -459,6 +461,20 @@ def test_same_geometry_column_in_two_tables_gets_different_object_classes(pipeli
     assert pa == pb                                    # one property, two object classes
     # the second table only asked for the object class: the property was known from the first
     assert "knownProperty" in model.requests[1]["ask"][0]
+
+
+def test_same_container_name_in_two_structures_of_one_dataset_are_two_tables(pipeline):
+    """Every CSV of a dataset has a `main`: the distributions tell the tables apart."""
+    a = slot("geom", [], dataset=PERSONS, distributions=[PERSONS + "/csv1"], structure="https://example.org/s8",
+             type_="string", fingerprint="fp-g")
+    b = slot("geom", [], dataset=PERSONS, distributions=[PERSONS + "/csv2"], structure="https://example.org/s9",
+             type_="string", fingerprint="fp-g")
+    write_slots(pipeline, [a, b])
+    model = CountingModel({})
+    link_with(pipeline, [a, b], model)
+    assert model.calls == 2
+    assert [r["table"]["distributions"] for r in model.requests] in ([[PERSONS + "/csv1"], [PERSONS + "/csv2"]],
+                                                                    [[PERSONS + "/csv2"], [PERSONS + "/csv1"]])
 
 
 def test_edited_dataset_description_makes_no_model_call(pipeline):
