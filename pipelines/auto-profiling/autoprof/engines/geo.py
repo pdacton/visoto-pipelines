@@ -11,7 +11,7 @@ import duckdb
 
 from ..model import Field, Part, sample_size, unique_slugs
 from . import EngineError
-from .tabular import SYSTEM_TABLES, connect, keys_unique, lit, profile_relation, q
+from .tabular import SYSTEM_TABLES, connect, dependencies, keys_unique, lit, profile_relation, q
 
 GEO_WKT = "http://www.opengis.net/ont/geosparql#wktLiteral"
 OGR_TYPES = {"Integer": "integer", "Integer64": "integer", "Real": "number", "String": "string",
@@ -103,6 +103,7 @@ def layer_part(con, file: str, layer: dict, label: str, rows: int, single: bool,
     if not part.crs:
         part.crs = srs_from_file(file)
     part.keysUnique = keys_unique(con, part)
+    dependencies(con, part)
     return part
 
 

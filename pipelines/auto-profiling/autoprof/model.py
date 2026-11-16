@@ -81,6 +81,74 @@ def value_sample(values, n: int = VALUE_SAMPLE) -> list[str]:
     return sorted(seen, key=lambda s: hashlib.md5(s.encode()).hexdigest())[:n]
 
 
+PATTERN_MIN_VALUES = 5     # distinct sample values needed before a shape is reported
+PATTERN_COVERAGE = 0.95    # share of the sample values one shape must cover
+REGEX_SPECIAL = set("\\.^$|?*+()[]{}-")
+
+
+def _shape(value: str) -> list[tuple[str, str]]:
+    """A value as runs of (class, text): "d" digits, "a" letters, "" one literal character."""
+    runs = []
+    for ch in value:
+        cls = "d" if ch.isdigit() and ch.isascii() else "a" if ch.isalpha() else ""
+        if cls and runs and runs[-1][0] == cls:
+            runs[-1] = (cls, runs[-1][1] + ch)
+        else:
+            runs.append((cls, ch))
+    return runs
+
+
+def _letters(texts: list[str]) -> str:
+    if not all(t.isascii() for t in texts):
+        return r"\p{L}"
+    if all(t.isupper() for t in texts):
+        return "[A-Z]"
+    if all(t.islower() for t in texts):
+        return "[a-z]"
+    return "[A-Za-z]"
+
+
+def _repeat(lengths: list[int]) -> str:
+    lo, hi = min(lengths), max(lengths)
+    return "" if lo == hi == 1 else f"{{{lo}}}" if lo == hi else f"{{{lo},{hi}}}"
+
+
+def _escape(text: str) -> str:
+    """Escaped for XPath/SPARQL regex syntax (Python's re.escape also escapes characters XPath rejects)."""
+    return "".join("\\" + c if c in REGEX_SPECIAL else c for c in text)
+
+
+def value_pattern(values: list[str]) -> str | None:
+    """The shape shared by nearly all values as an anchored regex (XPath syntax, as sh:pattern), or None.
+
+    Values are cut into runs of digits, letters and single other characters. The most common sequence
+    of run kinds must cover PATTERN_COVERAGE of the values. A run that is the same text in every value
+    stays literal (`CHE`, `-`); otherwise digits become \\d and letters a class, with the observed
+    length range: CHE-123.456.789 → ^CHE-\\d{3}\\.\\d{3}\\.\\d{3}$. Whether a shape is specific
+    enough to say anything is concept matching's decision, not this one's."""
+    values = [v for v in values if v and not v.endswith("…")]      # truncated values have lost their shape
+    if len(values) < PATTERN_MIN_VALUES:
+        return None
+    groups: dict[tuple, list] = {}
+    for v in values:
+        runs = _shape(v)
+        kinds = tuple(cls or text for cls, text in runs)       # a literal character is its own kind
+        groups.setdefault(kinds, []).append(runs)
+    kinds, members = max(groups.items(), key=lambda kv: (len(kv[1]), kv[0]))
+    if len(members) < PATTERN_COVERAGE * len(values):
+        return None
+    out = []
+    for i, kind in enumerate(kinds):
+        texts = [runs[i][1] for runs in members]
+        if len(set(texts)) == 1:
+            out.append(_escape(texts[0]))
+        elif kind == "d":
+            out.append(r"\d" + _repeat([len(t) for t in texts]))
+        else:
+            out.append(_letters(texts) + _repeat([len(t) for t in texts]))
+    return "^" + "".join(out) + "$"
+
+
 @dataclass
 class Field:
     name: str
@@ -105,6 +173,7 @@ class Field:
     stats: dict = field(default_factory=dict)        # count, nullPercentage, distinct, min, ...
     examples: list = field(default_factory=list)
     sample: list = field(default_factory=list)       # value_sample(): input of concept matching
+    pattern: str | None = None                       # value_pattern() of a string field's sample
 
     def is_key(self, primary_key: list[str]) -> bool:
         """Key dimension: primary key, temporal, or categorical non-numeric-measure field."""
@@ -128,6 +197,11 @@ class Part:
     primaryKey: list = field(default_factory=list)
     keysUnique: bool | None = None                   # sample check, set by the engine
     cube: bool | None = None                         # True forces (PX), None → rule
+    # Observed in the sample (tabular and geo engines), never constraints: field names unique and
+    # present in every row, and single-column functional dependencies
+    # {"determinant", "dependents", "rows", "distinct"} (see engines/tabular.dependencies).
+    candidateKeys: list = field(default_factory=list)
+    dependencies: list = field(default_factory=list)
     fields: list[Field] = field(default_factory=list)
 
     def key_fields(self) -> list[Field]:

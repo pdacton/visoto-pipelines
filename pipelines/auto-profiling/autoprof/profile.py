@@ -16,7 +16,7 @@ from . import formats
 from .config import Config
 from .engines import EngineError, NotTabular
 from .log import log
-from .model import Structure
+from .model import Part, Structure, value_pattern
 
 WORKERS = min(4, os.cpu_count() or 1)
 TOOLS = ["duckdb", "frictionless", "rdflib", "shexer", "genson", "lxml", "pyaxis", "pyogrio"]
@@ -80,6 +80,16 @@ def run_engine(cfg: Config, token: str, path: Path, detail: dict, tmp: Path) -> 
     raise EngineError(f"no-engine:{token}")
 
 
+def add_patterns(parts: list[Part]) -> None:
+    """A pattern per string field, from its value sample (all engines, nested parts too)."""
+    for part in parts:
+        for f in part.fields:
+            if f.type == "string" and f.sample:
+                f.pattern = value_pattern(f.sample)
+            if f.node is not None:
+                add_patterns([f.node])
+
+
 def profile_group(pipeline_dir: str, group: dict, sniffed: dict) -> dict:
     """Runs in a worker process; returns the Structure as a dict."""
     cfg = Config.load(Path(pipeline_dir))
@@ -105,6 +115,7 @@ def profile_group(pipeline_dir: str, group: dict, sniffed: dict) -> dict:
                 from .sniff import encoding
                 detail["encoding"] = encoding(path.read_bytes()[:65536])
         s.engine, s.parts = run_engine(cfg, token, path, detail, tmp)
+        add_patterns(s.parts)
         if not s.parts:
             s.status, s.statusReason = "failed", "no-parts"
     except EngineError as e:

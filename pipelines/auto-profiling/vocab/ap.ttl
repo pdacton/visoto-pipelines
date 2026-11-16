@@ -1,4 +1,4 @@
-# Copied from metadata-swiss/mds-datamodel ontology/autoprofiling/autoprofiling.ttl (c815874); edit it there, then copy.
+# Copied from metadata-swiss/mds-datamodel ontology/autoprofiling/autoprofiling.ttl (49d3436); edit it there, then copy.
 # Auto-profiling vocabulary (ap:)
 #
 # Describes the structure of a dataset at two levels:
@@ -153,6 +153,27 @@ ap:determinant a owl:ObjectProperty ;
 ap:dependent a owl:ObjectProperty ;
     rdfs:label "dependent"@en ;
     rdfs:domain ap:FunctionalDependency ;
+    rdfs:range ap:Slot ;
+    rdfs:isDefinedBy ap: .
+
+ap:supportRows a owl:DatatypeProperty ;
+    rdfs:label "support rows"@en ;
+    rdfs:comment "Sample rows with a value of the determinant that the dependency was checked on."@en ;
+    rdfs:domain ap:FunctionalDependency ;
+    rdfs:range xsd:integer ;
+    rdfs:isDefinedBy ap: .
+
+ap:determinantValues a owl:DatatypeProperty ;
+    rdfs:label "determinant values"@en ;
+    rdfs:comment "Distinct values of the determinant in those rows. Together with ap:supportRows it says how strong the evidence is: few repeated values make a weak dependency."@en ;
+    rdfs:domain ap:FunctionalDependency ;
+    rdfs:range xsd:integer ;
+    rdfs:isDefinedBy ap: .
+
+ap:candidateKey a owl:ObjectProperty ;
+    rdfs:label "candidate key"@en ;
+    rdfs:comment "A slot whose values are present and unique in every row of the container's sample: a candidate row key. Observed, never a constraint."@en ;
+    rdfs:domain ap:Container ;
     rdfs:range ap:Slot ;
     rdfs:isDefinedBy ap: .
 

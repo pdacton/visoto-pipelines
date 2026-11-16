@@ -298,25 +298,46 @@ A column's object class is the entity whose key determines the column.
 
 Auto-profiling (`pipelines/auto-profiling/`):
 
-- [ ] `resolve`: read the dataset's title, description, keywords and themes
+- [x] `resolve`: read the dataset's title, description, keywords and themes
   (`dct:title`, `dct:description`, `dcat:keyword`, `dcat:theme`). One
   language per dataset; description cut at 500 characters.
-- [ ] `profile`: functional dependencies per container, from the sample.
+- [x] `profile`: functional dependencies per container, from the sample.
   Single-column determinants only (`bfs_nr → gemeinde_name`), each with its
   support (rows, distinct determinant values). A column that is unique per
   row is recorded as a candidate row key instead. Tabular and geo engines
   first. Dependencies from a sample are evidence, not proof: none are
   reported below a minimum number of rows.
-- [ ] `profile`: a pattern per string slot, from the value sample: the shape
+- [x] `profile`: a pattern per string slot, from the value sample: the shape
   of the values as a regular expression (`^CH\d{12}$`, `^[A-Z]{2}$`),
   reported only when one shape covers nearly all values.
-- [ ] `emit`: `slots.jsonl` carries, once per container and not on every
+- [x] `emit`: `slots.jsonl` carries, once per container and not on every
   slot, the dataset context, the title of the representative distribution
   (already fetched, not passed on today), the full list of column names with
   datatypes, and the dependencies; per slot, its pattern. In the graph,
   dependencies become `ap:FunctionalDependency` and patterns `ap:pattern` on
   the observation (both terms exist in the `ap:` vocabulary, neither is
   emitted today).
+
+Auto-profiling results (2026-11-16, 100-dataset sample, re-profiled offline):
+
+- Dataset context for all 100 datasets, every language kept (decided
+  2026-11-16, replacing "first of de, fr, it, en"): 26 have titles in more
+  than one language. It goes to a new `out/containers.jsonl` (one line per
+  container) rather than onto every line of `slots.jsonl`.
+- Dependencies: 498 in 86 of 584 containers (tabular and geo); 141
+  containers have a candidate key. In the municipal-finance table (Thurgau)
+  `bfs_nr_gemeinde ↔ gemeinde_name` and nothing else; in the emissions table
+  municipality → district. Thresholds: 50 rows, 3 determinant values
+  repeating twice on average; below 50 rows the sample gave mostly noise
+  (`datum → gemeinde_bfs`). Rules in
+  [auto-profiling/02-model.md](../auto-profiling/02-model.md#candidate-keys-and-functional-dependencies).
+- Patterns: 395 of 2,416 string slots with a sample; most are digit-only
+  (`^\d{4}$` 33), which the tightened rule below keeps as "Text".
+- New `ap:` terms (metadata-swiss `49d3436`): `ap:candidateKey`,
+  `ap:supportRows`, `ap:determinantValues`. The output validates.
+- Fingerprints are unchanged except for 6 RDF slots whose datatype flips
+  between none and `xsd:string` from run to run (an older nondeterminism in
+  the RDF engine).
 
 Concept matching (`pipelines/concept-matching/`):
 
@@ -369,7 +390,7 @@ value domains shared by more than one dataset.
 
 ### Choices made while writing, to confirm
 
-- **Language of the dataset context:** the first available of de, fr, it, en.
+- **Language of the dataset context:** all languages (decided 2026-11-16).
 - **Unit of a model call:** the table (confirmed 2026-11-14). All its
   columns that lack an answer are asked together, with the full column list
   as context. Today it is one call per fingerprint.
@@ -386,9 +407,12 @@ value domains shared by more than one dataset.
   entry and the link says what matched. Strictly by ISO/IEC 11179 they are
   two value domains of one conceptual domain; that level does not exist in
   `mdr:` and is still undecided (below).
-- **When a pattern is specific enough** to make its own value domain: a
-  fixed shape that contains digits or punctuation. Everything else stays
-  "Text".
+- **When a pattern is specific enough** to make its own value domain
+  (decided 2026-11-16): the shape has at least one fixed literal character,
+  a prefix (`CHE-`, `A-`) or a separator (`.`, `/`, `-`). `^A\-\d{4}$`
+  qualifies; `^\d{4}$` and `^[A-Z]{2}$` stay "Text" (letters-only and
+  digit-only shapes join unrelated codes; code lists and identifier rules
+  catch the meaningful ones first). A space is not a separator.
 
 ### Not covered here
 

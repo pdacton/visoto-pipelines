@@ -74,20 +74,55 @@ source name), the same key `out/slots.jsonl` writes per slot; see
 | Concept | Term | Notes |
 |---|---|---|
 | Structure | `ap:DataStructure`, `dct:hasPart`, `dct:format` (sniffed, EU file-type IRI), `ap:declaredFormat`, `ap:formatMatch`, `ap:engine`, `ap:profiledDistribution` | |
-| Container | `sh:NodeShape` + `ap:Container`, `rdfs:label` (sheet or layer name), `ap:rowCount` | `cube:Constraint` added when applicable (below) |
+| Container | `sh:NodeShape` + `ap:Container`, `rdfs:label` (sheet or layer name), `ap:rowCount`, `ap:candidateKey`, `ap:functionalDependency [ a ap:FunctionalDependency ; ap:determinant ; ap:dependent ; ap:supportRows ; ap:determinantValues ; prov:wasGeneratedBy ]` | `cube:Constraint` added when applicable (below); keys and dependencies from tabular and geo samples only (below) |
 | Slot | `sh:PropertyShape` + `ap:Slot`, `sh:name`, `schema:name`, `sh:order`, `sh:path`, `sh:datatype`, `sh:minCount`, `sh:maxCount`, `sh:in`, `sh:pattern`, `sh:node` (nested JSON or XML), `ap:sourceName`, `ap:format` (also the date format of a CSV), `ap:categorical`, `ap:booleanCandidate`, `ap:codeLabel`, `ap:unitLabel`, `ap:fingerprint` | |
 | Logical source | `rml:LogicalSource`, `ap:container`, `rml:source` (the representative distribution), `ap:tableName`, `rml:referenceFormulation` (`rml:CSV`, `rml:JSONPath`), `rml:iterator` (records path as JSONPath, e.g. `$.results[*]`), `csvw:dialect [ csvw:delimiter ; csvw:header ; csvw:encoding ; csvw:skipRows ; csvw:headerRowCount ]` | top-level containers only |
 | Geometry | `ap:geometryType`, `ap:crs` (EPSG IRI), `sh:datatype geo:wktLiteral` | geo only |
-| Profile | `ap:observed [ a ap:Observation ; ap:count, ap:nullPercentage, ap:distinct, ap:minValue, ap:maxValue, ap:mean, ap:std, ap:q25, ap:q50, ap:q75, ap:example, ap:support, ap:maxItems, ap:maxPerInstance ]` | at most 3 examples, each truncated to 200 characters |
+| Profile | `ap:observed [ a ap:Observation ; ap:count, ap:nullPercentage, ap:distinct, ap:minValue, ap:maxValue, ap:mean, ap:std, ap:q25, ap:q50, ap:q75, ap:example, ap:pattern, ap:support, ap:maxItems, ap:maxPerInstance ]` | at most 3 examples, each truncated to 200 characters; `ap:pattern` for string slots (below) |
 | Provenance | `prov:wasGeneratedBy {run}`; the run carries `prov:startedAtTime`, `prov:endedAtTime`, `ap:toolVersion`, `ap:sampleRows` | |
 | Status | `ap:status` (`ap:profiled`, `ap:skipped`, `ap:failed`) and `ap:statusReason` on the distribution's structure stub | so visoto can show why something has no structure |
 
 Not emitted yet, although defined in `ap:`: triples maps, sentinels,
-functional dependencies, `ap:pattern`, `ap:valueHistogram`,
+`ap:valueHistogram`,
 `ap:minLength`/`ap:maxLength`, `ap:mainObjectClass`. Candidates, matches and
 the shortcuts to the registry come from the concept-matching pipeline.
 
-## Value sample and `out/slots.jsonl`
+## Candidate keys and functional dependencies
+
+The tabular and geo engines check each container's sample (at most
+`SAMPLE_ROWS` rows) for single-column keys and dependencies. Both are
+evidence from a sample, never constraints.
+
+- **Candidate key:** a slot with a value in every row, all distinct.
+  Decimals are left out, because a measure can be unique by chance.
+- **Functional dependency:** slot A determines slot B when each value of A
+  comes with exactly one value of B in the rows where A is set (B's nulls are
+  ignored). A must be a string or integer, must not be a candidate key, and
+  must repeat: at least 3 values, and on average 2 rows per value. Nothing is
+  reported below 50 rows, nor for containers with more than 120 slots.
+  Constant slots neither determine nor depend. One `ap:FunctionalDependency`
+  per determinant lists all its dependents; `ap:supportRows` and
+  `ap:determinantValues` say how strong the evidence is.
+- Composite keys are not looked for. A code and its label determine each
+  other, so they appear as two dependencies (`bfs_nr ↔ gemeinde_name`).
+
+Concept matching uses them to decide a column's object class: the dependents
+of a key that points to another entity belong to that entity.
+
+## Pattern
+
+`profile` derives a pattern for every string slot from its value sample (all
+engines). Each value is cut into runs of digits, runs of letters and single
+other characters. The most common sequence of run kinds must cover 95% of at
+least 5 values. A run that is the same in every value stays literal;
+otherwise digits become `\d` and letters `[A-Z]`, `[a-z]`, `[A-Za-z]` or
+`\p{L}` (non-ASCII), with the observed length range:
+`CHE-123.456.789` → `^CHE\-\d{3}\.\d{3}\.\d{3}$`, `BE` → `^[A-Z]{2}$`. Free
+text has no dominant shape and gets none. The syntax is XPath's, as for
+`sh:pattern`. Whether a pattern is specific enough to define a value domain
+is decided by concept matching, not here.
+
+## Value sample, `out/slots.jsonl` and `out/containers.jsonl`
 
 The `profile` stage keeps up to `VALUE_SAMPLE` (200) distinct values per
 field, chosen by their md5 hash so the same values give the same sample on
@@ -108,8 +143,22 @@ one line per slot, the input of the concept-matching pipeline:
 | `neighbours` | source names of up to 5 slots on each side |
 | `type`, `datatype`, `nested`, `unit`, `unitLabel`, `format` | Table Schema type, `sh:datatype`, whether the slot has a nested container, QUDT unit, published unit, format |
 | `min`, `max`, `distinct`, `count`, `nullPercentage`, `categorical` | observed statistics |
-| `sample` | the value sample |
+| `sample`, `pattern` | the value sample and its pattern |
 | `fingerprint` | first 16 hex characters of sha256 over the normalised name (case, accents and separators folded), the datatype and the sorted sample; also in the graph as `ap:fingerprint` |
+
+`emit` also writes `out/containers.jsonl`, one line per container (nested
+ones included), so a model can see the whole table:
+
+| Key | Content |
+|---|---|
+| `iri`, `structure`, `path`, `label`, `tableName`, `engine`, `rowCount`, `geometryType`, `crs` | the container |
+| `dataset` | `iri` and, from `resolve`, `title` and `description` per language (`""` for untagged; description cut at 500 characters), `keywords` per language (without `opendata.swiss`), `themes` |
+| `distribution` | `iri` and `title` of the representative distribution |
+| `columns` | every slot in order: `name`, `label`, `datatype`, `pattern`, `slot` (IRI), `fingerprint` |
+| `candidateKeys`, `dependencies` | source names; a dependency is `{determinant, dependents, rows, distinct}` |
+
+All languages of the dataset context are kept, because datasets come from
+every part of the country.
 
 A rerun with `--skip-fetch` re-profiles from the cached samples in `raw/`,
 so the value sample can be rebuilt without downloading again.

@@ -5,8 +5,10 @@ Structure and profile stay apart: constraints describe the data (sh:datatype,
 sh:in, cardinality), observed statistics hang off each slot via ap:observed and
 never become constraints. See .project/auto-profiling/02-model.md.
 
-out/slots.jsonl is not part of the graph: one line per slot with its value sample and
-fingerprint, the input of the concept-matching pipeline.
+out/slots.jsonl and out/containers.jsonl are not part of the graph; they are the input of the
+concept-matching pipeline. slots.jsonl: one line per slot with its value sample, pattern and
+fingerprint. containers.jsonl: one line per container with what a model needs to see the whole
+table: dataset context (all languages), distribution title, columns, candidate keys and dependencies.
 """
 import hashlib
 import json
@@ -64,6 +66,8 @@ class Emitter:
         self.base = base
         self.run = run_iri
         self.slots: list[dict] = []      # slots.jsonl records of the structures emitted so far
+        self.containers: list[dict] = [] # containers.jsonl records, likewise
+        self.dataset_context: dict = {}  # dataset IRI → title/description/keywords/themes (resolve)
         self._ctx: dict = {}
 
     def graph(self) -> Graph:
@@ -111,7 +115,7 @@ class Emitter:
             g.add((D, DCTERMS.conformsTo, S))
             g.add((URIRef(dists.get(iri, {}).get("dataset", s.dataset)), DCAT.distribution, D))
         self._ctx = {"structure": S, "dataset": s.dataset, "distributions": sorted(s.distributions),
-                     "engine": s.engine}
+                     "engine": s.engine, "representative": s.representative, "title": rep.get("title")}
         for part in s.parts:
             N = URIRef(f"{S}/{part.slug}")
             g.add((S, DCTERMS.hasPart, N))
@@ -151,13 +155,38 @@ class Emitter:
                     self.in_list(g, ps, [node])
         keys = part.key_fields() if cube else []
         names = [f.name for f in part.fields]
+        iris, columns = {}, []
         for order, (f, fslug) in enumerate(zip(part.fields, unique_slugs(names))):
             F = URIRef(f"{N}/{fslug}")
+            iris.setdefault(f.name, F)
             g.add((N, SH.property, F))
             dtype = self.field(g, f, F, order, col_base + fslug, engine, part, cube, f in keys)
             record = self.slot_record(f, F, dtype, N, part, names, order)
             g.add((F, AP.fingerprint, Literal(record["fingerprint"])))
             self.slots.append(record)
+            columns.append({"name": f.name, "label": f.title, "datatype": record["datatype"],
+                            "pattern": f.pattern, "slot": str(F), "fingerprint": record["fingerprint"]})
+        self.dependencies(g, part, N, iris)
+        self.containers.append(self.container_record(part, N, columns))
+
+    def dependencies(self, g: Graph, part: Part, N: URIRef, iris: dict) -> None:
+        """Candidate keys and functional dependencies observed in the sample (never constraints)."""
+        for name in part.candidateKeys:
+            if name in iris:
+                g.add((N, AP.candidateKey, iris[name]))
+        for dep in part.dependencies:
+            dependents = [iris[d] for d in dep["dependents"] if d in iris and d != dep["determinant"]]
+            if dep["determinant"] not in iris or not dependents:
+                continue
+            node = BNode()
+            g.add((N, AP.functionalDependency, node))
+            g.add((node, RDF.type, AP.FunctionalDependency))
+            g.add((node, AP.determinant, iris[dep["determinant"]]))
+            for D in dependents:
+                g.add((node, AP.dependent, D))
+            g.add((node, AP.supportRows, Literal(int(dep["rows"]))))
+            g.add((node, AP.determinantValues, Literal(int(dep["distinct"]))))
+            g.add((node, PROV.wasGeneratedBy, self.run))
 
     # --- physical description (rml:LogicalSource) -------------------------------------
 
@@ -287,7 +316,7 @@ class Emitter:
 
     def observed(self, g: Graph, F: URIRef, f: Field, dtype) -> None:
         stats = {k: f.stats[k] for k in STAT_KEYS if f.stats.get(k) is not None}
-        if not stats and not f.examples:
+        if not stats and not f.examples and not f.pattern:
             return
         node = BNode()
         g.add((F, AP.observed, node))
@@ -303,6 +332,8 @@ class Emitter:
             g.add((node, AP[STAT_TERMS.get(k, k)], lit))
         for e in f.examples:
             g.add((node, AP.example, Literal(e)))
+        if f.pattern:
+            g.add((node, AP.pattern, Literal(f.pattern)))
 
     # --- slots.jsonl ------------------------------------------------------------------
 
@@ -328,8 +359,23 @@ class Emitter:
             "min": f.stats.get("min"), "max": f.stats.get("max"), "distinct": f.stats.get("distinct"),
             "count": f.stats.get("count"), "nullPercentage": f.stats.get("nullPercentage"),
             "categorical": f.categorical,
-            "sample": f.sample,
+            "sample": f.sample, "pattern": f.pattern,
             "fingerprint": fingerprint(f.name, datatype, f.sample),
+        }
+
+    def container_record(self, part: Part, N: URIRef, columns: list[dict]) -> dict:
+        """One line of out/containers.jsonl: the whole table, for a model deciding object classes."""
+        S = self._ctx["structure"]
+        dataset = self._ctx["dataset"]
+        return {
+            "iri": str(N), "structure": str(S), "path": str(N)[len(str(S)) + 1:],
+            "label": part.label, "tableName": part.tableName, "engine": self._ctx["engine"],
+            "rowCount": part.rowCount, "geometryType": part.geometryType, "crs": part.crs,
+            "dataset": {"iri": dataset, **self.dataset_context.get(dataset, {})},
+            "distribution": {"iri": self._ctx["representative"], "title": self._ctx["title"]},
+            "columns": columns,
+            "candidateKeys": part.candidateKeys,
+            "dependencies": part.dependencies,
         }
 
     # --- helpers ---
@@ -408,12 +454,15 @@ def run(cfg: Config) -> None:
     parts = cfg.out / "parts"
     parts.mkdir(parents=True, exist_ok=True)
     info = json.loads((profiles / "_run.json").read_text())
-    dists = json.loads((cfg.raw / "distributions.json").read_text())["distributions"]
+    resolved = json.loads((cfg.raw / "distributions.json").read_text())
+    dists = resolved["distributions"]
     em = Emitter(cfg.base_iri, URIRef(f"{cfg.base_iri}run/{info['id']}"))
+    em.dataset_context = resolved.get("datasetContext", {})     # absent before resolve read it
     vocab_graph(cfg.pipeline_dir / "vocab" / "ap.ttl").serialize(parts / "00-vocab.nt", format="nt", encoding="utf-8")
     em.run_graph(info).serialize(parts / "00-run.nt", format="nt", encoding="utf-8")
     counts = {}
-    with open(cfg.out / "slots.jsonl", "w", encoding="utf-8") as slots:
+    with open(cfg.out / "slots.jsonl", "w", encoding="utf-8") as slots, \
+            open(cfg.out / "containers.jsonl", "w", encoding="utf-8") as containers:
         for path in sorted(profiles.glob("*.json")):
             if path.name.startswith("_"):
                 continue
@@ -422,5 +471,9 @@ def run(cfg: Config) -> None:
             for record in em.slots:
                 slots.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
             em.slots.clear()
+            for record in em.containers:
+                containers.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+            em.containers.clear()
             counts[s.status] = counts.get(s.status, 0) + 1
-    log(f"emit: {sum(counts.values())} structures {counts} → {parts.relative_to(cfg.pipeline_dir)}, out/slots.jsonl")
+    log(f"emit: {sum(counts.values())} structures {counts} → {parts.relative_to(cfg.pipeline_dir)}, out/slots.jsonl, "
+        f"out/containers.jsonl")

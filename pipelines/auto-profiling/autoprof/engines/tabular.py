@@ -171,6 +171,47 @@ def keys_unique(con, part: Part) -> bool | None:
     return bool(total) and total == distinct
 
 
+FD_MIN_ROWS = 50          # sample rows with a determinant value needed to report anything
+FD_MIN_DISTINCT = 3       # a determinant needs at least this many values ...
+FD_MIN_REPEAT = 2         # ... each repeated this often on average: a near-unique column determines all
+FD_TYPES = {"string", "integer"}     # determinant types; measures and dates are not keys of an entity
+FD_MAX_FIELDS = 120       # wider containers are not checked (one query per determinant)
+
+
+def dependencies(con, part: Part) -> None:
+    """Candidate row keys and single-column functional dependencies of the sample in table `sample`.
+
+    A field present and unique in every row is a candidate key (decimals are measures, unique by chance). Otherwise a field A determines B when
+    each value of A comes with one value of B in all rows where A is set (B's nulls are ignored).
+    Dependencies from a sample are evidence, not proof: none below FD_MIN_ROWS rows, and A must repeat
+    (FD_MIN_DISTINCT values, FD_MIN_REPEAT rows per value on average). Constant fields neither determine
+    nor depend. Composite determinants are not looked for."""
+    total = con.sql("SELECT COUNT(*) FROM sample").fetchall()[0][0]
+    cols = [f for f in part.fields
+            if f.type not in ("object", "array", "geojson", "any") and f.node is None]
+    if total < FD_MIN_ROWS or len(cols) < 2 or len(cols) > FD_MAX_FIELDS:
+        return
+    counts = con.sql("SELECT " + ", ".join(f"COUNT({q(f.name)}), COUNT(DISTINCT {q(f.name)})" for f in cols)
+                     + " FROM sample").fetchall()[0]
+    nonnull = {f.name: counts[2 * i] for i, f in enumerate(cols)}
+    distinct = {f.name: counts[2 * i + 1] for i, f in enumerate(cols)}
+    part.candidateKeys = [f.name for f in cols if f.type != "number" and nonnull[f.name] == total == distinct[f.name]]
+    varying = [f for f in cols if distinct[f.name] > 1]
+    for a in varying:
+        n, d = nonnull[a.name], distinct[a.name]
+        if (a.type not in FD_TYPES or a.name in part.candidateKeys or n < FD_MIN_ROWS
+                or d < FD_MIN_DISTINCT or n < FD_MIN_REPEAT * d):
+            continue
+        others = [b for b in varying if b is not a]
+        per_value = ", ".join(f"COUNT(DISTINCT {q(b.name)}) AS c{i}" for i, b in enumerate(others))
+        worst = ", ".join(f"MAX(c{i})" for i in range(len(others)))
+        row = con.sql(f"SELECT {worst} FROM (SELECT {per_value} FROM sample WHERE {q(a.name)} IS NOT NULL "
+                      f"GROUP BY {q(a.name)})").fetchall()[0]
+        dependents = [b.name for b, m in zip(others, row) if m is not None and m <= 1]
+        if dependents:
+            part.dependencies.append({"determinant": a.name, "dependents": dependents, "rows": n, "distinct": d})
+
+
 # --- readers ------------------------------------------------------------------------
 
 def to_utf8(path: Path, enc: str, tmp: Path) -> Path:
@@ -418,6 +459,7 @@ def profile(path: Path, kind: str, cfg, tmp: Path, detail: dict) -> list[Part]:
             if key:
                 part.dialect = {"recordsPath": f"/{key}"}
             part.keysUnique = keys_unique(con, part)
+            dependencies(con, part)
             return [part]
         raise EngineError(f"tabular-unsupported:{kind}")
     finally:
@@ -440,6 +482,7 @@ def csv_part(con, path: Path, detail: dict, rows: int, tmp: Path, slug: str, lab
     dialect["encoding"] = {"utf-8-sig": "utf-8"}.get(enc, enc)
     part = Part(slug=slug, label=label, rowCount=n, dialect=dialect, fields=fields)
     part.keysUnique = keys_unique(con, part)
+    dependencies(con, part)
     return part
 
 
@@ -465,6 +508,7 @@ def parquet_part(con, path: Path, detail: dict, rows: int, n_sample: int = 0) ->
     fields, n = profile_relation(con, f"read_parquet({p})", rows, n_sample=n_sample)
     part = Part(rowCount=total or n, fields=fields)
     part.keysUnique = keys_unique(con, part)
+    dependencies(con, part)
     return part
 
 

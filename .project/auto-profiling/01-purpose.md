@@ -123,13 +123,15 @@ that possible without touching the i14y pipeline.
 Stages, each rerunnable from the files of the previous one:
 
 ```
-resolve  datasets.txt → raw/distributions.json         (SPARQL)
+resolve  datasets.txt → raw/distributions.json         (SPARQL; distributions and dataset context)
 fetch    → raw/samples/*, raw/sniff.json                (HTTP, sniffing)
 profile  → out/profiles/*.json                          (format engines)
-emit     → out/parts/*.nt → out/auto-profiling.ttl      (SHACL + ap:), out/slots.jsonl
+emit     → out/parts/*.nt → out/auto-profiling.ttl      (SHACL + ap:), out/slots.jsonl, out/containers.jsonl
 validate → shapes.ttl + vocab/ap-shapes.ttl, checks/*.rq (validate.sh)
 ```
 
 `resolve` and `fetch` belong to `fetch.sh`; `profile` and `emit` belong to
 `transform.sh`. So `scripts/run.sh auto-profiling --skip-fetch` re-profiles
-offline from saved samples.
+offline from saved samples. It also skips `resolve`: a run whose
+`raw/distributions.json` predates the dataset context gets it with
+`uv run python -m autoprof resolve` (seconds, no downloads).

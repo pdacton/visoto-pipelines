@@ -31,6 +31,21 @@ SELECT ?dataset ?dist ?download ?access ?format ?media ?title ?modified ?identif
   OPTIONAL { ?dist dct:identifier ?identifier }
 }
 """
+DATASET_QUERY = """
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
+PREFIX dct: <http://purl.org/dc/terms/>
+SELECT ?dataset ?p ?o WHERE {
+  VALUES ?dataset { %s }
+  VALUES ?p { dct:title dct:description dcat:keyword dcat:theme }
+  ?dataset ?p ?o .
+}
+"""
+DATASET_FIELDS = {"http://purl.org/dc/terms/title": "title",
+                  "http://purl.org/dc/terms/description": "description",
+                  "http://www.w3.org/ns/dcat#keyword": "keywords",
+                  "http://www.w3.org/ns/dcat#theme": "themes"}
+DESCRIPTION_CHARS = 500     # per language
+NOISE_KEYWORDS = {"opendata.swiss"}     # on nearly every dataset; tells the model nothing
 KNOWN = """
 PREFIX dcat: <http://www.w3.org/ns/dcat#>
 SELECT DISTINCT ?dataset WHERE { VALUES ?dataset { %s } ?dataset a dcat:Dataset }
@@ -55,13 +70,20 @@ def read_datasets(path) -> list[str]:
     return out
 
 
-def sparql(client: httpx.Client, endpoint: str, query: str) -> list[dict]:
+def sparql(client: httpx.Client, endpoint: str, query: str, langs: bool = False) -> list[dict]:
+    """Result rows as {var: value}; with langs, a literal's language tag is in {var}@lang ("" if none)."""
     for attempt in range(4):
         try:
             r = client.post(endpoint, data={"query": query},
                             headers={"Accept": "application/sparql-results+json"})
             r.raise_for_status()
-            return [{k: v["value"] for k, v in b.items()} for b in r.json()["results"]["bindings"]]
+            rows = []
+            for b in r.json()["results"]["bindings"]:
+                row = {k: v["value"] for k, v in b.items()}
+                if langs:
+                    row |= {f"{k}@lang": v.get("xml:lang", "") for k, v in b.items() if v["type"] == "literal"}
+                rows.append(row)
+            return rows
         except (httpx.HTTPError, ValueError) as e:
             if attempt == 3:
                 raise
@@ -133,22 +155,62 @@ def collect(rows: list[dict]) -> dict[str, dict]:
     return dists
 
 
+def dataset_context(rows: list[dict]) -> dict[str, dict]:
+    """Title, description, keywords per language and themes per dataset, for concept matching.
+
+    All languages are kept: datasets come from every part of the country. Untagged literals are
+    under "". The description is cut at DESCRIPTION_CHARS per language."""
+    out = {}
+    for r in rows:
+        field = DATASET_FIELDS.get(r["p"])
+        value = r["o"].strip()
+        if not field or not value:
+            continue
+        d = out.setdefault(r["dataset"], {})
+        if field == "themes":
+            if value not in d.setdefault("themes", []):
+                d["themes"].append(value)
+            continue
+        lang = r.get("o@lang", "").lower()
+        if field == "keywords":
+            if value in NOISE_KEYWORDS:
+                continue
+            words = d.setdefault("keywords", {}).setdefault(lang, [])
+            if value not in words:
+                words.append(value)
+        elif lang not in d.setdefault(field, {}):      # one title and description per language
+            if field == "description" and len(value) > DESCRIPTION_CHARS:
+                value = value[:DESCRIPTION_CHARS - 1].rstrip() + "…"
+            d[field][lang] = value
+    for d in out.values():
+        for field in ("title", "description", "keywords"):
+            if field in d:
+                d[field] = dict(sorted(d[field].items()))
+        if "themes" in d:
+            d["themes"].sort()
+        for words in d.get("keywords", {}).values():
+            words.sort()
+    return out
+
+
 def run(cfg: Config) -> None:
     datasets = read_datasets(cfg.pipeline_dir / cfg["DATASETS"])
     log(f"resolve: {len(datasets)} datasets from {cfg['DATASETS']}")
-    rows, known = [], set()
+    rows, known, context_rows = [], set(), []
     with httpx.Client(timeout=120, headers={"User-Agent": USER_AGENT}) as client:
         for i in range(0, len(datasets), BATCH):
             values = " ".join(f"<{d}>" for d in datasets[i:i + BATCH])
             rows += sparql(client, cfg["ODS_ENDPOINT"], QUERY % values)
             known |= {r["dataset"] for r in sparql(client, cfg["ODS_ENDPOINT"], KNOWN % values)}
+            context_rows += sparql(client, cfg["ODS_ENDPOINT"], DATASET_QUERY % values, langs=True)
     dists = collect(rows)
     groups = build_groups(dists)
     with_dists = {d["dataset"] for d in dists.values()}
 
     cfg.raw.mkdir(parents=True, exist_ok=True)
     (cfg.raw / "distributions.json").write_text(json.dumps(
-        {"datasets": datasets, "distributions": dists, "groups": groups}, indent=1, ensure_ascii=False))
+        {"datasets": datasets, "datasetContext": dataset_context(context_rows), "distributions": dists,
+         "groups": groups}, indent=1, ensure_ascii=False))
     report = {
         "datasets": len(datasets),
         "unknown": [d for d in datasets if d not in known],
