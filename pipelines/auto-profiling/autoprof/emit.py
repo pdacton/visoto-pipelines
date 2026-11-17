@@ -99,7 +99,7 @@ class Emitter:
             g.add((S, RDFS.label, Literal(rep["title"])))
         for key, prop in (("downloadURL", DCAT.downloadURL), ("accessURL", DCAT.accessURL)):
             if absolute(rep.get(key)):
-                g.add((rep_iri, prop, URIRef(rep[key])))
+                g.add((rep_iri, prop, Literal(rep[key], datatype=XSD.anyURI)))   # a URL, not a resource
         for token in s.declared:
             g.add((S, AP.declaredFormat, self.format_term(token)))
         sniffed = s.sniffed
@@ -136,6 +136,8 @@ class Emitter:
             g.add((N, RDFS.label, Literal(part.label)))
         if part.rowCount is not None:
             g.add((N, AP.rowCount, Literal(int(part.rowCount))))
+            if part.rowCountIsMinimum:
+                g.add((N, AP.rowCountIsMinimum, Literal(True)))
         if part.targetClass and absolute(part.targetClass):
             g.add((N, SH.targetClass, absolute(part.targetClass)))
         if part.geometryType:
@@ -370,7 +372,8 @@ class Emitter:
         return {
             "iri": str(N), "structure": str(S), "path": str(N)[len(str(S)) + 1:],
             "label": part.label, "tableName": part.tableName, "engine": self._ctx["engine"],
-            "rowCount": part.rowCount, "geometryType": part.geometryType, "crs": part.crs,
+            "rowCount": part.rowCount, "rowCountIsMinimum": part.rowCountIsMinimum,
+            "geometryType": part.geometryType, "crs": part.crs,
             "dataset": {"iri": dataset, **self.dataset_context.get(dataset, {})},
             "distribution": {"iri": self._ctx["representative"], "title": self._ctx["title"]},
             "columns": columns,

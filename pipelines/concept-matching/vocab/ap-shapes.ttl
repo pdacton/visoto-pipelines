@@ -95,6 +95,7 @@ apsh:Container a sh:NodeShape ;
           sh:message "A container has at least one slot."@en ] ,
         [ sh:path ap:mainObjectClass ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
         [ sh:path ap:rowCount ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ,
+        [ sh:path ap:rowCountIsMinimum ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ,
         [ sh:path ap:geometryType ; sh:maxCount 1 ] ,
         [ sh:path ap:crs ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ,
         [ sh:path ap:functionalDependency ; sh:node apsh:FunctionalDependency ] ,

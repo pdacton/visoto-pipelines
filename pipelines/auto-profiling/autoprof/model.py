@@ -189,6 +189,7 @@ class Part:
     slug: str = "main"
     label: str | None = None
     rowCount: int | None = None
+    rowCountIsMinimum: bool | None = None            # True: the source has more rows than rowCount
     dialect: dict = field(default_factory=dict)      # delimiter, header, encoding, skipRows, headerRowCount
     geometryType: str | None = None
     crs: str | None = None                           # EPSG code, e.g. "2056"

@@ -115,9 +115,16 @@ ap:mainObjectClass a owl:ObjectProperty ;
 
 ap:rowCount a owl:DatatypeProperty ;
     rdfs:label "row count"@en ;
-    rdfs:comment "Rows, features or cells of a container: the total where the format states it, otherwise the sample's."@en ;
+    rdfs:comment "Rows, features or cells of a container: the format's own total where it states one, otherwise the rows counted in the downloaded file plus the lines streamed past it. A lower bound where ap:rowCountIsMinimum is true."@en ;
     rdfs:domain ap:Container ;
     rdfs:range xsd:integer ;
+    rdfs:isDefinedBy ap: .
+
+ap:rowCountIsMinimum a owl:DatatypeProperty ;
+    rdfs:label "row count is minimum"@en ;
+    rdfs:comment "True where the container has more rows than ap:rowCount: the download or the row count stopped at a size or time limit, or a WFS stated no total. Absent where the count is complete."@en ;
+    rdfs:domain ap:Container ;
+    rdfs:range xsd:boolean ;
     rdfs:isDefinedBy ap: .
 
 ap:geometryType a owl:DatatypeProperty ;

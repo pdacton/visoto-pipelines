@@ -31,6 +31,7 @@ EXT = {"PARQUET": "parquet", "CSV": "csv", "TSV": "tsv", "XLSX": "xlsx", "XLS": 
        "XML": "xml", "GML": "gml", "RDF_TURTLE": "ttl", "N3": "n3", "NT": "nt", "RDF_XML": "rdf",
        "PX": "px", "PXWEB": "json", "TXT": "txt"}
 LINE_BASED = {"CSV", "TSV", "JSONL", "RDF_TURTLE", "N3", "NT"}
+ROW_LINES = {"CSV", "TSV", "JSONL"}        # one record per line: the lines past the sample are counted
 TRUNCATABLE = {"XML"}                      # parsed with recovery, so a cut-off sample still works
 WHOLE_FILE = {"XLSX", "XLS", "ODS", "GPKG", "PX", "JSON", "JSON_LD", "PXWEB", "GML", "RDF_XML", "ZIP"}
 ZIP_MEMBERS = [(".gpkg", "GPKG"), (".shp", "SHP"), (".gml", "GML"), (".csv", "CSV"), (".xlsx", "XLSX"),
@@ -116,6 +117,8 @@ class Fetcher:
         self.max = cfg.max_bytes
         self.deadline = cfg.int("FETCH_DEADLINE")
         self.rows = cfg.int("SAMPLE_ROWS")
+        self.count_max = cfg.int("COUNT_MAX_MB") * 1024 * 1024
+        self.count_seconds = cfg.int("COUNT_SECONDS")
         self.samples = cfg.raw / "samples"
         self.cache_dir = cfg.cache / "samples"
         self.cache_file = cfg.cache / "cache.json"
@@ -230,7 +233,7 @@ class Fetcher:
         tail = None
         # The deadline starts once the request holds its slot: httpx times out per read only,
         # and a server that trickles data would otherwise hold the slot for ever.
-        async with self.client.stream("GET", url) as resp, asyncio.timeout(self.deadline):
+        async with self.client.stream("GET", url) as resp, asyncio.timeout(self.deadline) as budget:
             r.httpStatus = resp.status_code
             r.contentType = resp.headers.get("content-type")
             if resp.status_code >= 400:
@@ -264,7 +267,7 @@ class Fetcher:
             else:
                 path = base.with_suffix("." + EXT[token])
                 if token in LINE_BASED:
-                    await self.lines(bytes(first), chunks, path, token, r)
+                    await self.lines(bytes(first), chunks, path, token, r, budget.when())
                 else:
                     await self.whole(bytes(first), chunks, path, token in TRUNCATABLE, r)
 
@@ -304,8 +307,12 @@ class Fetcher:
         (self.cfg.pipeline_dir / (r.sample + ".xsd")).write_bytes(resp.content)
         r.detail["xsd"] = str(xsd_url)
 
-    async def lines(self, first: bytes, chunks, path: Path, token: str, r: Result) -> None:
-        """Stream until SAMPLE_ROWS lines (plus a header) or the size limit; cut at a line end."""
+    async def lines(self, first: bytes, chunks, path: Path, token: str, r: Result,
+                    deadline: float | None = None) -> None:
+        """Stream until SAMPLE_ROWS lines (plus a header) or the size limit; cut at a line end.
+        For one-record-per-line formats the rest of the stream is then read without being kept, and
+        its lines counted (detail moreLines; moreLinesComplete false where COUNT_MAX_MB or
+        COUNT_SECONDS stopped the count first)."""
         buf = bytearray(first)
         limit = self.rows + 1
         if token in ("RDF_TURTLE", "N3", "NT"):
@@ -323,11 +330,41 @@ class Fetcher:
         if newlines >= limit or not exhausted:
             cut = _nth_newline(buf, limit) if newlines >= limit else buf.rfind(b"\n") + 1
             r.truncated = cut < len(buf) or not exhausted
+            if token in ROW_LINES and r.truncated:
+                r.detail["moreLines"], r.detail["moreLinesComplete"] = await self.count_lines(
+                    bytes(buf[cut:]), chunks, exhausted, deadline)
             buf = buf[:cut]
             if token in ("RDF_TURTLE", "N3") and r.truncated:
                 buf = _turtle_cut(bytes(buf))
         r.bytes = len(buf)
         path.write_bytes(bytes(buf))
+
+    async def count_lines(self, rest: bytes, chunks, exhausted: bool,
+                          deadline: float | None) -> tuple[int, bool]:
+        """Lines in `rest` and the remaining chunks; (count, whether the stream was read to its end).
+        Stops at COUNT_MAX_MB, after COUNT_SECONDS, or 5 s before the fetch deadline."""
+        lines, size, last = rest.count(b"\n"), len(rest), rest[-1:]
+        complete = exhausted
+        if not exhausted:
+            loop = asyncio.get_running_loop()
+            stop = loop.time() + self.count_seconds
+            if deadline is not None:
+                stop = min(stop, deadline - 5)
+            try:
+                async with asyncio.timeout_at(stop):
+                    async for chunk in chunks:
+                        lines += chunk.count(b"\n")
+                        size += len(chunk)
+                        last = chunk[-1:] or last
+                        if size >= self.count_max:
+                            break
+                    else:
+                        complete = True
+            except (TimeoutError, httpx.HTTPError):
+                pass
+        if complete and last not in (b"", b"\n"):
+            lines += 1                      # a last line without a line end
+        return lines, complete
 
     async def whole(self, first: bytes, chunks, path: Path, truncatable: bool, r: Result) -> None:
         size = len(first)
@@ -476,7 +513,11 @@ class Fetcher:
                 continue
             (directory / f"{stem}.gml").write_bytes(gf.content)
             total += len(gf.content)
-            layers.append({"name": name, "file": f"{stem}.gml", "status": "ok"})
+            layer = {"name": name, "file": f"{stem}.gml", "status": "ok"}
+            # WFS 2 states the layer's total; WFS 1.x's numberOfFeatures is only the page
+            if m := re.search(rb'\snumberMatched="(\d+)"', gf.content[:HEAD_BYTES]):
+                layer["numberMatched"] = int(m.group(1))
+            layers.append(layer)
         r.detail["layerFiles"] = layers
         r.bytes = total
         r.sample = self.rel(directory)

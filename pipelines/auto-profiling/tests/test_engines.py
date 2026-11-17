@@ -164,3 +164,44 @@ def test_empty_objects_give_no_nested_container(cfg, tmp_path):
     [part] = tree.profile(src, "JSON", cfg, tmp_path, {})
     f = next(f for f in part.fields if f.name == "summaries")
     assert f.type == "object" and f.node is None
+
+
+def test_csv_row_count_past_the_sample(cfg, tmp_path):
+    """A full sample: DuckDB counts the whole local file, fetch's moreLines adds the rest of the stream."""
+    cfg.values["SAMPLE_ROWS"] = "5"
+    src = tmp_path / "s.csv"
+    src.write_text("a;b\n" + "".join(f"{i};x\n" for i in range(6)))     # fetch keeps SAMPLE_ROWS + 1 lines
+    detail = {"delimiter": ";", "encoding": "utf-8", "truncated": True, "moreLines": 994, "moreLinesComplete": True}
+    [part] = tabular.profile(src, "CSV", cfg, tmp_path / "t", detail)
+    assert (part.rowCount, part.rowCountIsMinimum) == (1000, False)
+    [part] = tabular.profile(src, "CSV", cfg, tmp_path / "u", {**detail, "moreLinesComplete": False})
+    assert (part.rowCount, part.rowCountIsMinimum) == (1000, True)
+    # a sample cut off by an older fetch, without a line count
+    [part] = tabular.profile(src, "CSV", cfg, tmp_path / "v", {"delimiter": ";", "encoding": "utf-8",
+                                                                "truncated": True})
+    assert (part.rowCount, part.rowCountIsMinimum) == (6, True)
+
+
+def test_json_row_count_is_all_records(cfg, tmp_path):
+    cfg.values["SAMPLE_ROWS"] = "5"
+    src = tmp_path / "r.json"
+    src.write_text(json.dumps([{"a": i, "b": "x"} for i in range(12)]))
+    [part] = tabular.profile(src, "JSON", cfg, tmp_path / "t", {})
+    assert (part.rowCount, part.rowCountIsMinimum) == (12, False)
+    src.write_text(json.dumps([{"a": i, "b": {"c": {"d": 1}}} for i in range(12)]))
+    [part] = tree.profile(src, "JSON", cfg, tmp_path / "u", {})
+    assert part.rowCount == 12
+
+
+def test_wfs_count():
+    from autoprof.engines.geo import wfs_count
+    from autoprof.model import Part
+    p = Part(rowCount=1000)
+    wfs_count(p, {"numberMatched": 48211}, 1000)
+    assert (p.rowCount, p.rowCountIsMinimum) == (48211, False)
+    p = Part(rowCount=1000)
+    wfs_count(p, {}, 1000)
+    assert (p.rowCount, p.rowCountIsMinimum) == (1000, True)
+    p = Part(rowCount=12)
+    wfs_count(p, {}, 1000)
+    assert p.rowCountIsMinimum is False

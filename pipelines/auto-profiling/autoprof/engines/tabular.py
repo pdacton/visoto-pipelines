@@ -86,6 +86,24 @@ def number(v):
 
 # --- statistics shared by the tabular and geo engines ---------------------------------
 
+def full_count(con, source: str, sampled: int, sample_rows: int) -> int | None:
+    """Rows of the whole local source, not only the profiled LIMIT; None where reading it all fails."""
+    if sampled < sample_rows:
+        return sampled
+    try:
+        return con.sql(f"SELECT COUNT(*) FROM {source}").fetchall()[0][0]
+    except duckdb.Error:
+        return None
+
+
+def count_rows(part: Part, con, source: str, sampled: int, sample_rows: int, detail: dict) -> None:
+    """rowCount: the whole local file (DuckDB) plus the lines fetch counted past it (moreLines)."""
+    local = full_count(con, source, sampled, sample_rows)
+    part.rowCount = (local if local is not None else sampled) + detail.get("moreLines", 0)
+    part.rowCountIsMinimum = local is None or detail.get("moreLinesComplete") is False or \
+        bool(detail.get("truncated") and "moreLines" not in detail)
+
+
 def profile_relation(con, source: str, sample_rows: int, skip: set[str] = frozenset(),
                      n_sample: int = 0) -> tuple[list[Field], int]:
     """Fields with statistics for `SELECT * FROM <source> LIMIT sample_rows`, and up to n_sample distinct
@@ -284,7 +302,11 @@ def sheets(path: Path, kind: str, max_rows: int):
         import openpyxl
         wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
         for ws in wb.worksheets:
-            yield ws.title, [list(r) for r in ws.iter_rows(values_only=True, max_row=max_rows)]
+            kept = [list(r) for r in ws.iter_rows(values_only=True, max_row=max_rows)]
+            more = 0
+            if len(kept) >= max_rows:       # count the rest without keeping it
+                more = sum(1 for r in ws.iter_rows(min_row=max_rows + 1, values_only=True) if _filled(r))
+            yield ws.title, kept, more
         wb.close()
     elif kind == "XLS":
         import xlrd
@@ -304,17 +326,18 @@ def sheets(path: Path, kind: str, max_rows: int):
                     else:
                         row.append(cell.value)
                 rows.append(row)
-            yield ws.name, rows
+            yield ws.name, rows, max(ws.nrows - max_rows, 0)
     elif kind == "ODS":
         import ezodf
         doc = ezodf.opendoc(str(path))
         for ws in doc.sheets:
-            rows = []
+            rows, more = [], 0
             for i, r in enumerate(ws.rows()):
-                if i >= max_rows:
-                    break
-                rows.append([c.value for c in r])
-            yield ws.name, rows
+                if i < max_rows:
+                    rows.append([c.value for c in r])
+                elif any(c.value not in (None, "") for c in r):
+                    more += 1
+            yield ws.name, rows, more
 
 
 def _filled(row) -> int:
@@ -433,13 +456,14 @@ def profile(path: Path, kind: str, cfg, tmp: Path, detail: dict) -> list[Part]:
         if kind in ("XLSX", "XLS", "ODS"):
             parts = []
             names = []
-            for name, sheet_rows in sheets(path, kind, rows + 60):
+            for name, sheet_rows, more in sheets(path, kind, rows + 60):
                 out = tmp / f"sheet-{len(names)}.csv"
                 found = sheet_to_csv(sheet_rows, out)
                 if found is None:
                     continue
                 names.append(name)
-                part = csv_part(con, out, {"delimiter": ",", "encoding": "utf-8"}, rows, tmp, name, name, n)
+                part = csv_part(con, out, {"delimiter": ",", "encoding": "utf-8", "moreLines": more},
+                                rows, tmp, name, name, n)
                 part.dialect = {**found, "header": True}
                 part.tableName = name
                 parts.append(part)
@@ -455,7 +479,8 @@ def profile(path: Path, kind: str, cfg, tmp: Path, detail: dict) -> list[Part]:
             source = f"read_json({lit(src)}, format='newline_delimited', sample_size=-1, maximum_depth=2)"
             fields, count = profile_relation(con, source, rows, n_sample=n)
             integral_numbers(con, fields)
-            part = Part(label=key, rowCount=count, fields=fields)
+            part = Part(label=key, fields=fields)
+            count_rows(part, con, source, count, rows, detail if kind == "JSONL" else {})
             if key:
                 part.dialect = {"recordsPath": f"/{key}"}
             part.keysUnique = keys_unique(con, part)
@@ -480,7 +505,8 @@ def csv_part(con, path: Path, detail: dict, rows: int, tmp: Path, slug: str, lab
         if f.type in ("date", "datetime") and dialect.get("dateFormat") and not f.format:
             f.format = dialect["dateFormat"]
     dialect["encoding"] = {"utf-8-sig": "utf-8"}.get(enc, enc)
-    part = Part(slug=slug, label=label, rowCount=n, dialect=dialect, fields=fields)
+    part = Part(slug=slug, label=label, dialect=dialect, fields=fields)
+    count_rows(part, con, source, n, rows, detail)
     part.keysUnique = keys_unique(con, part)
     dependencies(con, part)
     return part

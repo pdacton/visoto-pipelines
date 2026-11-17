@@ -189,7 +189,7 @@ def profile_json(path: Path, cfg) -> list[Part]:
     for r in records:
         json_paths(r, "", stats, 1)
     part = json_part(schema, "", stats, len(records), 1, None, sample_size(cfg))
-    part.rowCount = len(records)
+    part.rowCount = sum(isinstance(r, dict) for r in data) if isinstance(data, list) else 1   # all, not the profiled
     if isinstance(data, list):
         part.dialect = {"recordsPath": "/"}
     return [part]

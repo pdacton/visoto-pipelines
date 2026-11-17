@@ -31,6 +31,7 @@ def layers_of(path: str, token: str, detail: dict) -> list[tuple[str | None, str
 def profile(path: Path, token: str, cfg, tmp: Path, detail: dict) -> list[Part]:
     rows = cfg.int("SAMPLE_ROWS")
     n = sample_size(cfg)
+    info = {l["name"]: l for l in detail.get("layerFiles", [])} if token == "WFS" else {}
     con = connect(tmp / "duckdb")
     con.execute("LOAD spatial")
     parts = []
@@ -45,8 +46,11 @@ def profile(path: Path, token: str, cfg, tmp: Path, detail: dict) -> list[Part]:
             for layer in layers:
                 if SYSTEM_TABLES.match(layer["name"]):
                     continue
-                parts.append(layer_part(con, file, layer, label or layer["name"], rows, single=len(layers) == 1,
-                                        n_sample=n))
+                part = layer_part(con, file, layer, label or layer["name"], rows, single=len(layers) == 1,
+                                  n_sample=n)
+                if token == "WFS":
+                    wfs_count(part, info.get(label, {}), cfg.int("WFS_FEATURES"))
+                parts.append(part)
     finally:
         con.close()
     if not parts:
@@ -54,6 +58,15 @@ def profile(path: Path, token: str, cfg, tmp: Path, detail: dict) -> list[Part]:
     for part, s in zip(parts, unique_slugs([p.label or "main" for p in parts])):
         part.slug = s if len(parts) > 1 else "main"
     return parts
+
+
+def wfs_count(part: Part, layer: dict, page: int) -> None:
+    """A WFS sample holds one GetFeature page: the layer's total is numberMatched where the server
+    states it, otherwise at least the page."""
+    if isinstance(layer.get("numberMatched"), int):
+        part.rowCount, part.rowCountIsMinimum = layer["numberMatched"], False
+    elif part.rowCount is not None:
+        part.rowCountIsMinimum = part.rowCount >= page
 
 
 def layer_part(con, file: str, layer: dict, label: str, rows: int, single: bool, n_sample: int = 0) -> Part:

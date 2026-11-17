@@ -13,6 +13,8 @@ DEFAULTS = {
     "BASE_IRI": "https://register.ld.admin.ch/mds/",
     "SAMPLE_ROWS": "10000",
     "MAX_DOWNLOAD_MB": "50",
+    "COUNT_MAX_MB": "1000",
+    "COUNT_SECONDS": "120",
     "CONCURRENCY": "8",
     "PER_HOST": "2",
     "HTTP_TIMEOUT": "30",

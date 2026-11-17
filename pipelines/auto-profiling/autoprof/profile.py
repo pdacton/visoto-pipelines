@@ -105,6 +105,7 @@ def profile_group(pipeline_dir: str, group: dict, sniffed: dict) -> dict:
     try:
         path = cfg.pipeline_dir / sniffed["sample"]
         token, detail = sniffed["sniffed"], dict(sniffed.get("detail") or {})
+        detail["truncated"] = bool(sniffed.get("truncated"))
         if token == "ZIP":
             token, member = detail["inner"], detail["member"]
             if token == "SHP":
@@ -115,6 +116,9 @@ def profile_group(pipeline_dir: str, group: dict, sniffed: dict) -> dict:
                 from .sniff import encoding
                 detail["encoding"] = encoding(path.read_bytes()[:65536])
         s.engine, s.parts = run_engine(cfg, token, path, detail, tmp)
+        for part in s.parts:
+            if part.rowCountIsMinimum is None and part.rowCount is not None:
+                part.rowCountIsMinimum = detail["truncated"]   # counted in a cut-off sample
         add_patterns(s.parts)
         if not s.parts:
             s.status, s.statusReason = "failed", "no-parts"

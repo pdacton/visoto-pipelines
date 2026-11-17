@@ -51,3 +51,20 @@ def test_wfs_operation_url_from_capabilities():
     assert operation_url(caps, "DescribeFeatureType", "https://wfs.example.org", "?") == ("https://wfs.example.org", "?")
     assert _xml_root(b"<?xml version='1.0'?>\n<wfs:FeatureCollection xmlns:wfs='http://www.opengis.net/wfs/2.0'>") \
         == "{http://www.opengis.net/wfs/2.0}FeatureCollection"
+
+
+def test_count_lines_past_the_sample():
+    import asyncio
+    from types import SimpleNamespace
+
+    async def chunks(*parts):
+        for p in parts:
+            yield p
+
+    def count(rest, parts, exhausted=False, count_max=10**9, deadline=None):
+        f = SimpleNamespace(count_max=count_max, count_seconds=60)
+        return asyncio.run(fetch.Fetcher.count_lines(f, rest, chunks(*parts), exhausted, deadline))
+
+    assert count(b"x\ny\n", [b"z\n", b"w"]) == (4, True)             # unterminated last line counts
+    assert count(b"x\n", [], exhausted=True) == (1, True)
+    assert count(b"x\n", [b"y\n" * 10, b"z\n" * 10], count_max=5) == (11, False)

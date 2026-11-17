@@ -4,7 +4,7 @@ from pathlib import Path
 from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.collection import Collection
 from rdflib.compare import isomorphic, to_isomorphic
-from rdflib.namespace import DCAT, DCTERMS, RDF, SH
+from rdflib.namespace import DCAT, DCTERMS, RDF, SH, XSD
 
 from autoprof.emit import AP, CSVW, RML, Emitter, vocab_graph
 from autoprof.model import Structure
@@ -131,7 +131,7 @@ def test_logical_source_of_records_and_sheets():
     assert str(g.value(sources["data"], RML.iterator)) == "$.results[*]"
     assert g.value(sources["data"], RML.referenceFormulation) == RML.JSONPath
     assert str(g.value(sources["sheet_2"], AP.tableName)) == "Sheet 2"
-    assert g.value(URIRef("https://example.org/x"), DCAT.downloadURL) == URIRef("https://example.org/file.json")
+    assert g.value(URIRef("https://example.org/x"), DCAT.downloadURL) == Literal("https://example.org/file.json", datatype=XSD.anyURI)
 
 
 def test_json_path():
