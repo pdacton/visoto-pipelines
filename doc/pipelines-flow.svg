@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1660 832" width="1660" height="832" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <title>Auto-profiling and concept-matching pipeline flow</title>
+  <style>
+    :root { --bg:#ffffff; --lane:#f4f6fa; --box:#ffffff; --stroke:#5b6b82; --text:#1d2533; --muted:#4b5668;
+            --llm:#fff4e5; --llm-stroke:#d97706; --run:#eef6ee; --run-stroke:#2f855a; --in:#f9fafb; --arrow:#5b6b82; --link:#2563eb; --eng:#e8f1fc; --eng-stroke:#5b8fd6; --eng-text:#1e4f8f; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#151a22; --lane:#1d2430; --box:#232b38; --stroke:#8b9ab0; --text:#e6ebf2; --muted:#aab5c5;
+              --llm:#3a2a12; --llm-stroke:#f59e0b; --run:#16301f; --run-stroke:#48bb78; --in:#1a202a; --arrow:#8b9ab0; --link:#60a5fa; --eng:#1b2a40; --eng-stroke:#4a7ac0; --eng-text:#a9c8f0; }
+    }
+    .bg { fill:var(--bg); } .lane { fill:var(--lane); }
+    .box { fill:var(--box); stroke:var(--stroke); stroke-width:1.5; }
+    .llm { fill:var(--llm); stroke:var(--llm-stroke); stroke-width:1.5; }
+    .run { fill:var(--run); stroke:var(--run-stroke); stroke-width:1.5; }
+    .in { fill:var(--in); stroke:var(--stroke); stroke-width:1.2; stroke-dasharray:4 3; }
+    .h { fill:var(--text); font-size:16px; font-weight:700; }
+    .t { fill:var(--text); font-size:13px; font-weight:600; text-anchor:middle; }
+    .s { fill:var(--muted); font-size:11px; text-anchor:middle; }
+    .l { text-anchor:start; }
+    .eng { fill:var(--eng); stroke:var(--eng-stroke); stroke-width:1.2; }
+    .et { fill:var(--eng-text); font-size:12px; font-weight:700; text-anchor:middle; }
+    .es { fill:var(--eng-text); font-size:11px; text-anchor:middle; }
+    .p { fill:var(--muted); font-size:11px; text-anchor:middle; font-style:italic; }
+    .phase { fill:var(--muted); font-size:11px; font-family:ui-monospace, monospace; }
+    .br { stroke:var(--muted); stroke-width:1; fill:none; }
+    .a { stroke:var(--arrow); stroke-width:1.5; fill:none; marker-end:url(#arr); }
+    .x { stroke:var(--link); stroke-width:1.8; fill:none; marker-end:url(#arrx); }
+    .xl { fill:var(--link); font-size:11px; text-anchor:middle; }
+  </style>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--arrow)"/></marker>
+    <marker id="arrx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--link)"/></marker>
+  </defs>
+  <rect class="bg" width="1660" height="832"/>
+  <rect class="lane" x="10" y="40" width="1640" height="378" rx="10"/>
+  <text class="h" x="26" y="66">Auto-profiling</text>
+  <path class="br" d="M200,105 v-6 h340 v6"/><text class="phase" x="206" y="93">fetch.sh</text>
+  <path class="br" d="M560,105 v-6 h880 v6"/><text class="phase" x="566" y="93">transform.sh</text>
+  <path class="br" d="M1460,105 v-6 h180 v6"/><text class="phase" x="1466" y="93">scripts/run.sh</text>
+  <rect class="in" x="20" y="116" width="160" height="134" rx="8"/>
+  <text class="t" x="100.0" y="140">datasets.txt</text>
+  <text class="s" x="100.0" y="160">The list of</text>
+  <text class="s" x="100.0" y="175">opendata.swiss datasets</text>
+  <text class="s" x="100.0" y="190">to profile (a sample or</text>
+  <text class="s" x="100.0" y="205">the full set).</text>
+  <path class="a" d="M180,183.0 H198"/>
+  <rect class="box" x="200" y="116" width="160" height="134" rx="8"/>
+  <text class="t" x="280.0" y="140">resolve</text>
+  <text class="s" x="280.0" y="160">Asks opendata.swiss which</text>
+  <text class="s" x="280.0" y="175">files each dataset</text>
+  <text class="s" x="280.0" y="190">offers. The same table</text>
+  <text class="s" x="280.0" y="205">published in several</text>
+  <text class="s" x="280.0" y="220">formats is grouped, so it</text>
+  <text class="s" x="280.0" y="235">is profiled only once.</text>
+  <path class="a" d="M360,183.0 H378"/>
+  <rect class="box" x="380" y="116" width="160" height="134" rx="8"/>
+  <text class="t" x="460.0" y="140">fetch</text>
+  <text class="s" x="460.0" y="160">Downloads only the first</text>
+  <text class="s" x="460.0" y="175">part of one file per</text>
+  <text class="s" x="460.0" y="190">group and checks its real</text>
+  <text class="s" x="460.0" y="205">format, since the</text>
+  <text class="s" x="460.0" y="220">declared format is often</text>
+  <text class="s" x="460.0" y="235">wrong.</text>
+  <path class="a" d="M540,183.0 H558"/>
+  <rect class="box" x="560" y="116" width="160" height="134" rx="8"/>
+  <text class="t" x="640.0" y="140">profile</text>
+  <text class="s" x="640.0" y="160">Reads each sample with</text>
+  <text class="s" x="640.0" y="175">the engine for its format</text>
+  <text class="s" x="640.0" y="190">(below) and works out the</text>
+  <text class="s" x="640.0" y="205">columns, their types and</text>
+  <text class="s" x="640.0" y="220">value statistics.</text>
+  <path class="a" d="M720,183.0 H1098"/>
+  <rect class="box" x="1100" y="116" width="160" height="134" rx="8"/>
+  <text class="t" x="1180.0" y="140">emit</text>
+  <text class="s" x="1180.0" y="160">Writes the structures as</text>
+  <text class="s" x="1180.0" y="175">SHACL in RDF, and hands</text>
+  <text class="s" x="1180.0" y="190">every column with its</text>
+  <text class="s" x="1180.0" y="205">sample values on to</text>
+  <text class="s" x="1180.0" y="220">concept matching.</text>
+  <path class="a" d="M1260,183.0 H1278"/>
+  <rect class="box" x="1280" y="116" width="160" height="134" rx="8"/>
+  <text class="t" x="1360.0" y="140">report</text>
+  <text class="s" x="1360.0" y="160">Summarises what was</text>
+  <text class="s" x="1360.0" y="175">profiled, what failed and</text>
+  <text class="s" x="1360.0" y="190">why, in report.md.</text>
+  <path class="a" d="M1440,183.0 H1458"/>
+  <rect class="run" x="1460" y="116" width="180" height="134" rx="8"/>
+  <text class="t" x="1550.0" y="140">merge · validate</text>
+  <text class="s" x="1550.0" y="160">Merges the parts into one</text>
+  <text class="s" x="1550.0" y="175">file, checks it against</text>
+  <text class="s" x="1550.0" y="190">SHACL shapes and writes</text>
+  <text class="s" x="1550.0" y="205">auto-profiling.ttl.</text>
+  <path class="br" d="M640.0,250 V328 M320.0,328 H960.0"/>
+  <path class="a" d="M320.0,328 V340"/>
+  <rect class="eng" x="244.0" y="342" width="152" height="60" rx="7"/>
+  <text class="et" x="320.0" y="360">Tabular</text>
+  <text class="s" x="320.0" y="376">CSV, Excel, ODS, Parquet</text>
+  <text class="es" x="320.0" y="391">DuckDB, Frictionless</text>
+  <path class="a" d="M480.0,328 V340"/>
+  <rect class="eng" x="404.0" y="342" width="152" height="60" rx="7"/>
+  <text class="et" x="480.0" y="360">Geo</text>
+  <text class="s" x="480.0" y="376">SHP, GPKG, GML, WFS</text>
+  <text class="es" x="480.0" y="391">DuckDB spatial, pyogrio</text>
+  <path class="a" d="M640.0,328 V340"/>
+  <rect class="eng" x="564.0" y="342" width="152" height="60" rx="7"/>
+  <text class="et" x="640.0" y="360">RDF</text>
+  <text class="s" x="640.0" y="376">Turtle, JSON-LD, RDF/XML</text>
+  <text class="es" x="640.0" y="391">sheXer, rdflib</text>
+  <path class="a" d="M800.0,328 V340"/>
+  <rect class="eng" x="724.0" y="342" width="152" height="60" rx="7"/>
+  <text class="et" x="800.0" y="360">PX</text>
+  <text class="s" x="800.0" y="376">PC-Axis, PxWeb tables</text>
+  <text class="es" x="800.0" y="391">pyaxis, PxWeb API</text>
+  <path class="a" d="M960.0,328 V340"/>
+  <rect class="eng" x="884.0" y="342" width="152" height="60" rx="7"/>
+  <text class="et" x="960.0" y="360">XML / JSON</text>
+  <text class="s" x="960.0" y="376">nested documents</text>
+  <text class="es" x="960.0" y="391">lxml + XSD, genson</text>
+  <rect class="in" x="200" y="280" width="160" height="28" rx="14"/><text class="p" x="280.0" y="298">opendata.swiss</text>
+  <path class="a" d="M280.0,280 V252"/>
+  <rect class="in" x="380" y="280" width="160" height="28" rx="14"/><text class="p" x="460.0" y="298">file URLs · cache</text>
+  <path class="a" d="M460.0,280 V252"/>
+  <rect class="lane" x="10" y="458" width="1640" height="284" rx="10"/>
+  <text class="h" x="26" y="484">Concept matching</text>
+  <path class="br" d="M20,523 v-6 h340 v6"/><text class="phase" x="26" y="511">fetch.sh</text>
+  <path class="br" d="M380,523 v-6 h1060 v6"/><text class="phase" x="386" y="511">transform.sh</text>
+  <path class="br" d="M1460,523 v-6 h180 v6"/><text class="phase" x="1466" y="511">scripts/run.sh</text>
+  <rect class="box" x="20" y="534" width="160" height="134" rx="8"/>
+  <text class="t" x="100.0" y="558">codes</text>
+  <text class="s" x="100.0" y="578">Downloads the official</text>
+  <text class="s" x="100.0" y="593">I14Y code lists from</text>
+  <text class="s" x="100.0" y="608">LINDAS into a local</text>
+  <text class="s" x="100.0" y="623">index, refreshing only</text>
+  <text class="s" x="100.0" y="638">lists that changed.</text>
+  <path class="a" d="M180,601.0 H198"/>
+  <rect class="box" x="200" y="534" width="160" height="134" rx="8"/>
+  <text class="t" x="280.0" y="558">slots</text>
+  <text class="s" x="280.0" y="578">Takes a copy of the</text>
+  <text class="s" x="280.0" y="593">columns (“slots”) that</text>
+  <text class="s" x="280.0" y="608">auto-profiling found, as</text>
+  <text class="s" x="280.0" y="623">the input of this run.</text>
+  <path class="a" d="M360,601.0 H378"/>
+  <rect class="box" x="380" y="534" width="160" height="134" rx="8"/>
+  <text class="t" x="460.0" y="558">registry</text>
+  <text class="s" x="460.0" y="578">Creates a registry entry</text>
+  <text class="s" x="460.0" y="593">(value domain) for every</text>
+  <text class="s" x="460.0" y="608">code list, list version</text>
+  <text class="s" x="460.0" y="623">and known identifier</text>
+  <text class="s" x="460.0" y="638">type.</text>
+  <path class="a" d="M540,601.0 H558"/>
+  <rect class="box" x="560" y="534" width="160" height="134" rx="8"/>
+  <text class="t" x="640.0" y="558">confirm</text>
+  <text class="s" x="640.0" y="578">Reads the matches a</text>
+  <text class="s" x="640.0" y="593">person made by hand and</text>
+  <text class="s" x="640.0" y="608">attaches them to the</text>
+  <text class="s" x="640.0" y="623">current columns again.</text>
+  <path class="a" d="M720,601.0 H738"/>
+  <rect class="box" x="740" y="534" width="160" height="134" rx="8"/>
+  <text class="t" x="820.0" y="558">link-values</text>
+  <text class="s" x="820.0" y="578">Decides by rules what</text>
+  <text class="s" x="820.0" y="593">kind of values each</text>
+  <text class="s" x="820.0" y="608">column holds: codes from</text>
+  <text class="s" x="820.0" y="623">a list, an identifier, or</text>
+  <text class="s" x="820.0" y="638">plain data such as dates</text>
+  <text class="s" x="820.0" y="653">or amounts.</text>
+  <path class="a" d="M900,601.0 H918"/>
+  <rect class="llm" x="920" y="534" width="160" height="134" rx="8"/>
+  <text class="t" x="1000.0" y="558">link-concepts</text>
+  <text class="s" x="1000.0" y="578">A model names what each</text>
+  <text class="s" x="1000.0" y="593">column describes: an</text>
+  <text class="s" x="1000.0" y="608">object (e.g.</text>
+  <text class="s" x="1000.0" y="623">municipality) and a</text>
+  <text class="s" x="1000.0" y="638">property (e.g.</text>
+  <text class="s" x="1000.0" y="653">population).</text>
+  <path class="a" d="M1080,601.0 H1098"/>
+  <rect class="box" x="1100" y="534" width="160" height="134" rx="8"/>
+  <text class="t" x="1180.0" y="558">emit</text>
+  <text class="s" x="1180.0" y="578">Writes the registry and</text>
+  <text class="s" x="1180.0" y="593">every match, with the</text>
+  <text class="s" x="1180.0" y="608">evidence behind it, as</text>
+  <text class="s" x="1180.0" y="623">RDF.</text>
+  <path class="a" d="M1260,601.0 H1278"/>
+  <rect class="box" x="1280" y="534" width="160" height="134" rx="8"/>
+  <text class="t" x="1360.0" y="558">report</text>
+  <text class="s" x="1360.0" y="578">Lists the matches, the</text>
+  <text class="s" x="1360.0" y="593">columns waiting for</text>
+  <text class="s" x="1360.0" y="608">review, and confirmed</text>
+  <text class="s" x="1360.0" y="623">lists that no longer fit</text>
+  <text class="s" x="1360.0" y="638">the data.</text>
+  <path class="a" d="M1440,601.0 H1458"/>
+  <rect class="run" x="1460" y="534" width="180" height="134" rx="8"/>
+  <text class="t" x="1550.0" y="558">merge · validate</text>
+  <text class="s" x="1550.0" y="578">Merges and checks the parts</text>
+  <text class="s" x="1550.0" y="593">and writes</text>
+  <text class="s" x="1550.0" y="608">concept-matching.ttl. A</text>
+  <text class="s" x="1550.0" y="623">person&#x27;s matches go to a</text>
+  <text class="s" x="1550.0" y="638">file of their own.</text>
+  <rect class="in" x="20" y="698" width="160" height="28" rx="14"/><text class="p" x="100.0" y="716">LINDAS code lists</text>
+  <path class="a" d="M100.0,698 V670"/>
+  <rect class="in" x="560" y="698" width="160" height="28" rx="14"/><text class="p" x="640.0" y="716">confirmations.csv</text>
+  <path class="a" d="M640.0,698 V670"/>
+  <rect class="in" x="920" y="698" width="160" height="28" rx="14"/><text class="p" x="1000.0" y="716">embeddings · cache</text>
+  <path class="a" d="M1000.0,698 V670"/>
+  <path class="x" d="M1180.0,250 V438 H280.0 V531"/>
+  <text class="xl" x="730.0" y="432">columns with sample values (slots.jsonl)</text>
+  <g transform="translate(20,772)">
+  <rect class="box" x="0" y="0" width="22" height="14" rx="3"/><text class="s l" x="30" y="11">step</text>
+  <rect class="llm" x="90" y="0" width="22" height="14" rx="3"/><text class="s l" x="120" y="11">step that uses a language model</text>
+  <rect class="run" x="320" y="0" width="22" height="14" rx="3"/><text class="s l" x="350" y="11">shared final step (scripts/run.sh)</text>
+  <rect class="in" x="560" y="0" width="22" height="14" rx="3"/><text class="s l" x="590" y="11">external input</text>
+  <path class="x" d="M700,7 H735"/><text class="s l" x="744" y="11">output of one pipeline is input of the other</text>
+</g>
+  <text class="s l" x="20" y="812">A person's match always beats an automatic one. Their matches live in a graph of their own that pipeline runs never replace.</text>
+</svg>
